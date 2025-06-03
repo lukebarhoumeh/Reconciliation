@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\lukeb\\source\\repos\\ReadyNetworks_Portal\\Source\\Tools\\ReconciliationGitHub\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{426CBF07-1EC1-26CB-8BBC-771BDB7F006C}|Reconciliation\\Reconciliation.csproj|c:\\users\\lukeb\\source\\repos\\readynetworks_portal\\source\\tools\\reconciliationgithub\\reconciliation\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{426CBF07-1EC1-26CB-8BBC-771BDB7F006C}|Reconciliation\\Reconciliation.csproj|solutionrelative:reconciliation\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": ".gitignore",
+              "DocumentMoniker": "C:\\Users\\lukeb\\source\\repos\\ReadyNetworks_Portal\\Source\\Tools\\ReconciliationGitHub\\Reconciliation\\.gitignore",
+              "RelativeDocumentMoniker": "Reconciliation\\.gitignore",
+              "ToolTip": "C:\\Users\\lukeb\\source\\repos\\ReadyNetworks_Portal\\Source\\Tools\\ReconciliationGitHub\\Reconciliation\\.gitignore",
+              "RelativeToolTip": "Reconciliation\\.gitignore",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-06-03T22:33:10.644Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+﻿# Build results
+[Bb]in/
+[Oo]bj/
+
+# VS user-specific
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider/JetBrains
+.idea/
+
+# Resharper
+_ReSharper*/
+*.resharper
+*.DotSettings.user
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+# .nuget/
+
+# Logs
+*.log
