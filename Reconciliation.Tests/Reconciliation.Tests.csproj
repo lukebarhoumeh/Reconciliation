@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -20,7 +20,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <ProjectReference Include="../Reconciliation/Reconciliation.csproj" />
-</ItemGroup>
+    <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
+    <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
+  </ItemGroup>
 
 </Project>
