@@ -5,65 +5,64 @@ using System.Linq;
 
 namespace Reconciliation
 {
+    public record ErrorLogEntry(DateTime Timestamp, string ErrorLevel, int RowNumber,
+        string ColumnName, string Description, string RawValue, string FileName, string Context);
+
     public static class ErrorLogger
     {
-        private static readonly List<string> _errors = new();
-        private static readonly List<string> _warnings = new();
-
+        private static readonly List<ErrorLogEntry> _entries = new();
         private static readonly Dictionary<string, int> _errorCounts = new();
         private static readonly Dictionary<string, int> _warningCounts = new();
 
-        public static IReadOnlyList<string> Errors => _errors.AsReadOnly();
-        public static IReadOnlyList<string> Warnings => _warnings.AsReadOnly();
-
+        public static IReadOnlyList<ErrorLogEntry> Entries => _entries.AsReadOnly();
         public static IReadOnlyDictionary<string, int> ErrorSummary => _errorCounts;
         public static IReadOnlyDictionary<string, int> WarningSummary => _warningCounts;
 
-        public static bool HasErrors => _errors.Count > 0;
-        public static bool HasWarnings => _warnings.Count > 0;
+        public static bool HasErrors => _entries.Any(e => e.ErrorLevel == "Error");
+        public static bool HasWarnings => _entries.Any(e => e.ErrorLevel == "Warning");
 
-        public static void LogError(string message)
+        public static void LogError(int rowNumber, string columnName, string description,
+            string rawValue, string fileName, string context)
         {
-            Add(_errors, _errorCounts, message);
+            Add("Error", rowNumber, columnName, description, rawValue, fileName, context);
         }
 
-        public static void LogWarning(string message)
+        public static void LogWarning(int rowNumber, string columnName, string description,
+            string rawValue, string fileName, string context)
         {
-            Add(_warnings, _warningCounts, message);
+            Add("Warning", rowNumber, columnName, description, rawValue, fileName, context);
         }
 
         public static void LogMissingColumn(string column, string file)
         {
             string msg = $"The expected column '{column}' was not found in the {file} file. Please check your CSV for missing or renamed columns.";
-            LogError(msg);
+            LogError(-1, column, msg, string.Empty, file, string.Empty);
         }
 
-        private static void Add(List<string> list, Dictionary<string, int> counts, string message)
+        private static void Add(string level, int row, string column, string description,
+            string rawValue, string fileName, string context)
         {
-            string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
-            lock (list)
+            var entry = new ErrorLogEntry(DateTime.Now, level, row, column, description, rawValue, fileName, context);
+            lock (_entries)
             {
-                list.Add(entry);
+                _entries.Add(entry);
             }
+            var counts = level == "Error" ? _errorCounts : _warningCounts;
             lock (counts)
             {
-                if (counts.ContainsKey(message))
-                    counts[message]++;
+                if (counts.ContainsKey(description))
+                    counts[description]++;
                 else
-                    counts[message] = 1;
+                    counts[description] = 1;
             }
         }
 
         public static void Clear()
         {
-            lock (_errors)
+            lock (_entries)
             {
-                _errors.Clear();
+                _entries.Clear();
                 _errorCounts.Clear();
-            }
-            lock (_warnings)
-            {
-                _warnings.Clear();
                 _warningCounts.Clear();
             }
         }
@@ -72,21 +71,36 @@ namespace Reconciliation
         {
             var lines = new List<string>
             {
-                $"Total Errors: {ErrorSummary.Values.Sum()}, Total Warnings: {WarningSummary.Values.Sum()}",
-                "Type,Message,Count"
+                "Timestamp,ErrorLevel,RowNumber,ColumnName,Description,RawValue,FileName,Context"
             };
-
-            foreach (var kv in ErrorSummary)
+            int err;
+            int warn;
+            lock (_entries)
             {
-                lines.Add($"Error,\"{kv.Key}\",{kv.Value}");
+                foreach (var e in _entries)
+                {
+                    lines.Add(string.Join(',',
+                        e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
+                        e.ErrorLevel,
+                        e.RowNumber > 0 ? e.RowNumber.ToString() : "-",
+                        Escape(e.ColumnName),
+                        Escape(e.Description),
+                        Escape(e.RawValue),
+                        Escape(e.FileName),
+                        Escape(e.Context)));
+                }
+                err = _entries.Count(x => x.ErrorLevel == "Error");
+                warn = _entries.Count(x => x.ErrorLevel == "Warning");
             }
-
-            foreach (var kv in WarningSummary)
-            {
-                lines.Add($"Warning,\"{kv.Key}\",{kv.Value}");
-            }
-
+            lines.Add(string.Join(',', new string[8]) + $",Total Errors: {err}, Total Warnings: {warn}");
             File.WriteAllLines(filePath, lines);
+        }
+
+        private static string Escape(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            return value.Contains(',') || value.Contains('"')
+                ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
         }
     }
 }

@@ -2,7 +2,7 @@
 MSP HUB RECONCILATION TOOL
 
 ## CSV Normalization
-The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings.
+The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings. Validation errors are exported as structured CSV files for easy review.
 
 ### Running Tests
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
