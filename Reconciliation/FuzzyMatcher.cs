@@ -33,7 +33,7 @@ namespace Reconciliation
             return bestDist <= maxDistance ? best : null;
         }
 
-        private static int Levenshtein(string s, string t)
+        internal static int Levenshtein(string s, string t)
         {
             int n = s.Length;
             int m = t.Length;
@@ -51,6 +51,21 @@ namespace Reconciliation
                 }
             }
             return d[n, m];
+        }
+
+        /// <summary>
+        /// Determine if two strings are considered a match within the given distance.
+        /// </summary>
+        /// <param name="a">First string.</param>
+        /// <param name="b">Second string.</param>
+        /// <param name="maxDistance">Maximum allowed distance.</param>
+        public static bool IsFuzzyMatch(string a, string b, int maxDistance = 2)
+        {
+            if (a is null) throw new ArgumentNullException(nameof(a));
+            if (b is null) throw new ArgumentNullException(nameof(b));
+            string na = Normalize(a);
+            string nb = Normalize(b);
+            return Levenshtein(na, nb) <= maxDistance;
         }
 
         private static string Normalize(string input)
