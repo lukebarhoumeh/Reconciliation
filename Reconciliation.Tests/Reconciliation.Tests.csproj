@@ -23,6 +23,7 @@
     <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
     <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
     <Compile Include="../Reconciliation/FuzzyMatcher.cs" Link="FuzzyMatcher.cs" />
+    <Compile Include="../Reconciliation/DiscrepancyDetector.cs" Link="DiscrepancyDetector.cs" />
   </ItemGroup>
 
 </Project>
