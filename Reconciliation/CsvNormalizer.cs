@@ -1,6 +1,7 @@
 using Microsoft.VisualBasic.FileIO;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Reconciliation
@@ -34,17 +35,17 @@ namespace Reconciliation
                 dt.Rows.Add(row);
             }
 
-            NormalizeRows(dt);
+            NormalizeRows(dt, Path.GetFileName(filePath));
             return dt.DefaultView;
         }
 
         public static DataView NormalizeDataTable(DataTable table)
         {
-            NormalizeRows(table);
+            NormalizeRows(table, string.Empty);
             return table.DefaultView;
         }
 
-        private static void NormalizeRows(DataTable table)
+        private static void NormalizeRows(DataTable table, string fileName)
         {
             int line = 1;
             foreach (DataRow row in table.Rows)
@@ -67,7 +68,9 @@ namespace Reconciliation
                         }
                         else
                         {
-                            ErrorLogger.LogError($"Row {line}: The column '{column.ColumnName}' expected a date but found '{cleaned}'");
+                            ErrorLogger.LogError(line, column.ColumnName,
+                                $"The column '{column.ColumnName}' expected a date but found '{cleaned}'",
+                                cleaned, fileName, string.Empty);
                             row[column] = cleaned;
                         }
                     }
@@ -84,7 +87,9 @@ namespace Reconciliation
                         }
                         else
                         {
-                            ErrorLogger.LogError($"Row {line}: The column '{column.ColumnName}' expected a numeric value but found '{cleaned}'");
+                            ErrorLogger.LogError(line, column.ColumnName,
+                                $"The column '{column.ColumnName}' expected a numeric value but found '{cleaned}'",
+                                cleaned, fileName, string.Empty);
                             row[column] = cleaned;
                         }
                     }

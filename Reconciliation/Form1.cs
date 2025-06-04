@@ -211,6 +211,7 @@ namespace Reconciliation
 
                     // Load CSV data
                     _microsoftDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
+                    DataQualityValidator.Run(_microsoftDataView.Table, fileInfo.Name);
 
                     // Validate file structure
                     ValidateMicrosoftInvoice(_microsoftDataView.Table, "TermAndBillingCycle");
@@ -279,6 +280,7 @@ namespace Reconciliation
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     var size = FormatSize(fileInfo.Length);
                     _sixDotOneDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
+                    DataQualityValidator.Run(_sixDotOneDataView.Table, fileInfo.Name);
                     ValidateSixDotOneInvoice(_sixDotOneDataView.Table, "InternalReferenceId");
                     if (!_sixDotOneDataView.Table.Columns.Contains("SkuId"))
                     {
