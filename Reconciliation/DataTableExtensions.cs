@@ -18,7 +18,7 @@ namespace Reconciliation
             if (match != null && match != expected)
             {
                 table.Columns[match].ColumnName = expected;
-                ErrorLogger.Log($"Column '{expected}' not found. Using close match '{match}'.");
+                ErrorLogger.LogWarning($"Column '{expected}' was not found. Using close match '{match}'.");
                 return true;
             }
             return table.Columns.Contains(expected);

@@ -57,35 +57,35 @@ namespace Reconciliation
 
                     if (IsDateColumn(column.ColumnName))
                     {
-                        if (!string.IsNullOrWhiteSpace(cleaned) && DateTime.TryParse(cleaned, out DateTime d))
+                        if (string.IsNullOrWhiteSpace(cleaned))
+                        {
+                            row[column] = string.Empty;
+                        }
+                        else if (DateTime.TryParse(cleaned, out DateTime d))
                         {
                             row[column] = d.ToString("yyyy-MM-dd");
                         }
-                        else if (!string.IsNullOrWhiteSpace(cleaned))
-                        {
-                            ErrorLogger.Log($"Line {line}, Field \"{column.ColumnName}\": Value \"{cleaned}\" is not a valid date");
-                            row[column] = cleaned;
-                        }
                         else
                         {
-                            row[column] = string.Empty;
+                            ErrorLogger.LogError($"Row {line}: The column '{column.ColumnName}' expected a date but found '{cleaned}'");
+                            row[column] = cleaned;
                         }
                     }
                     else if (IsNumericColumn(column.ColumnName))
                     {
                         string digits = Regex.Replace(cleaned, "[^0-9.-]", string.Empty);
-                        if (!string.IsNullOrWhiteSpace(digits) && decimal.TryParse(digits, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal num))
+                        if (string.IsNullOrWhiteSpace(cleaned))
+                        {
+                            row[column] = string.Empty;
+                        }
+                        else if (decimal.TryParse(digits, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal num))
                         {
                             row[column] = num.ToString(CultureInfo.InvariantCulture);
                         }
-                        else if (!string.IsNullOrWhiteSpace(cleaned))
-                        {
-                            ErrorLogger.Log($"Line {line}, Field \"{column.ColumnName}\": Value \"{cleaned}\" is not a valid number");
-                            row[column] = cleaned;
-                        }
                         else
                         {
-                            row[column] = string.Empty;
+                            ErrorLogger.LogError($"Row {line}: The column '{column.ColumnName}' expected a numeric value but found '{cleaned}'");
+                            row[column] = cleaned;
                         }
                     }
                     else
