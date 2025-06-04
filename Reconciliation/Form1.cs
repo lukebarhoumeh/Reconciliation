@@ -198,7 +198,7 @@ namespace Reconciliation
                     var fileInfo = new FileInfo(fileDialog.FileName);
 
                     // Load CSV data
-                    _microsoftDataView = CSVData.GetCsvData(fileInfo.FullName);
+                    _microsoftDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
 
                     // Validate file structure
                     ValidateMicrosoftInvoice(_microsoftDataView.Table, "TermAndBillingCycle");
@@ -266,7 +266,7 @@ namespace Reconciliation
                     ClearFileInfo(lblSixDotOneFileName, lblSixDotOneFileRowCount);
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     var size = FormatSize(fileInfo.Length);
-                    _sixDotOneDataView = CSVData.GetCsvData(fileInfo.FullName);
+                    _sixDotOneDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
                     ValidateSixDotOneInvoice(_sixDotOneDataView.Table, "InternalReferenceId");
                     if (!_sixDotOneDataView.Table.Columns.Contains("SkuId"))
                     {
@@ -449,6 +449,17 @@ namespace Reconciliation
 
                         // Attach the event handler for cell formatting
                         dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
+                if (ErrorLogger.HasErrors)
+                {
+                    var res = MessageBox.Show($"Parsing errors found: {ErrorLogger.Errors.Count}. Export log?", "Parsing Errors", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (res == DialogResult.Yes)
+                    {
+                        using var sfd = new SaveFileDialog { Filter = "CSV File|*.csv", FileName = $"ErrorLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
+                        if (sfd.ShowDialog() == DialogResult.OK)
+                            ErrorLogger.Export(sfd.FileName);
+                    }
+                    ErrorLogger.Clear();
+                }
                     }));
                 }
             }
