@@ -466,7 +466,8 @@ namespace Reconciliation
                         dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
                 if (ErrorLogger.HasErrors)
                 {
-                    var res = MessageBox.Show($"Parsing errors found: {ErrorLogger.Errors.Count}. Export log?", "Parsing Errors", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    var errorCount = ErrorLogger.Entries.Count(e => e.ErrorLevel == "Error");
+                    var res = MessageBox.Show($"Parsing errors found: {errorCount}. Export log?", "Parsing Errors", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (res == DialogResult.Yes)
                     {
                         using var sfd = new SaveFileDialog { Filter = "CSV File|*.csv", FileName = $"ErrorLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
