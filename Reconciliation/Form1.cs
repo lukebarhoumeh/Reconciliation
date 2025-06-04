@@ -9,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace Reconciliation
@@ -21,6 +22,8 @@ namespace Reconciliation
         private string[] _columnsToBeDeleted = { "CustomerCountry", "MpnId", "AvailabilityId", "Currency", "PriceAdjustmentDescription", "PublisherName", "PublisherId", "ProductQualifiers", "ReferenceId", "MeterDescription", "PCToBCExchangeRateDate", "PCToBCExchangeRate", "PricingCurrency", "BillableQuantity", "AlternateId", "UnitType" };
         private int hoveredIndex = -1;
         private bool isSwitchingMode = false;
+        private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
+        private readonly ToolTip _toolTip = new();
 
         #region Form_UX
 
@@ -28,6 +31,9 @@ namespace Reconciliation
         {
             this.AutoScaleMode = AutoScaleMode.Dpi;
             InitializeComponent();
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.WindowState = FormWindowState.Normal;
+            this.Size = new Size(1280, 800);
             this.MaximizedBounds = Screen.FromHandle(this.Handle).WorkingArea;
             var assembly = Assembly.GetExecutingAssembly();
             lblVersion.Text = $"Version : {Assembly.GetExecutingAssembly().GetName().Version.ToString()}";
@@ -42,6 +48,12 @@ namespace Reconciliation
             {
                 page.BackColor = Color.White;
             }
+            _toolTip.SetToolTip(btnImportMicrosoft, "Select the Microsoft invoice CSV to reconcile");
+            _toolTip.SetToolTip(btnImportSixDotOneFile, "Select the MSP Hub invoice CSV to reconcile");
+            _toolTip.SetToolTip(btnCompare, "Run reconciliation using the loaded files");
+            _toolTip.SetToolTip(btnExportToCsv, "Export reconciliation results to CSV");
+            _toolTip.SetToolTip(btnExportLogs, "Export parsing and processing logs");
+            _toolTip.SetToolTip(chkFuzzyColumns, "Allow approximate column name matches when importing");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbExternal.Checked = true;
@@ -287,7 +299,8 @@ namespace Reconciliation
                         else
                         {
                             _sixDotOneDataView.Table.Clear();
-                            throw new ArgumentException("SkuId colunm is not found");
+                            ErrorLogger.LogMissingColumn("SkuId", "MSP Hub invoice");
+                            throw new ArgumentException("The expected column 'SkuId' is missing from the MSP Hub invoice CSV.");
 
                         }
                     }
@@ -641,14 +654,25 @@ namespace Reconciliation
         {
             if (!dataTable.Columns.Contains(columnName))
             {
-                throw new ArgumentException($"Please upload the correct Microsoft Invoice CSV file.");
+                if (AllowFuzzyColumns && dataTable.TryFuzzyRenameColumn(columnName))
+                {
+                    return;
+                }
+                ErrorLogger.LogMissingColumn(columnName, "Microsoft invoice");
+                throw new ArgumentException($"The expected column '{columnName}' is missing from the Microsoft invoice CSV.");
             }
         }
+
         private void ValidateSixDotOneInvoice(DataTable dataTable, string columnName)
         {
             if (!dataTable.Columns.Contains(columnName))
             {
-                throw new ArgumentException($"Please upload the correct MSP Hub Invoice CSV file.");
+                if (AllowFuzzyColumns && dataTable.TryFuzzyRenameColumn(columnName))
+                {
+                    return;
+                }
+                ErrorLogger.LogMissingColumn(columnName, "MSP Hub invoice");
+                throw new ArgumentException($"The expected column '{columnName}' is missing from the MSP Hub invoice CSV.");
             }
         }
         private void SplitColumn(DataTable dataTable, string sourceColumnName, string termColumnName, string billingCycleColumnName)

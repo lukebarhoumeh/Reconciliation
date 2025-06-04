@@ -51,6 +51,7 @@
             rbExternal = new RadioButton();
             btnCompare = new Button();
             btnExportToCsv = new Button();
+            chkFuzzyColumns = new CheckBox();
             lblDiscrepancyTitle = new Label();
             lblExternal1DiscrepancyMsg = new Label();
             lblEmptyMessage = new Label();
@@ -219,6 +220,7 @@
             tabPage1.Controls.Add(rbExternal);
             tabPage1.Controls.Add(btnCompare);
             tabPage1.Controls.Add(btnExportToCsv);
+            tabPage1.Controls.Add(chkFuzzyColumns);
             tabPage1.Controls.Add(lblDiscrepancyTitle);
             tabPage1.Controls.Add(lblExternal1DiscrepancyMsg);
             tabPage1.Controls.Add(lblEmptyMessage);
@@ -366,7 +368,16 @@
             btnExportToCsv.TextAlign = ContentAlignment.MiddleRight;
             btnExportToCsv.UseVisualStyleBackColor = false;
             btnExportToCsv.Click += btnExportToCsv_Click;
-            // 
+            // chkFuzzyColumns
+            //
+            chkFuzzyColumns.AutoSize = true;
+            chkFuzzyColumns.Location = new Point(2366, 400);
+            chkFuzzyColumns.Name = "chkFuzzyColumns";
+            chkFuzzyColumns.Size = new Size(187, 24);
+            chkFuzzyColumns.TabIndex = 50;
+            chkFuzzyColumns.Text = "Allow fuzzy column match";
+            chkFuzzyColumns.UseVisualStyleBackColor = true;
+            //
             // lblDiscrepancyTitle
             // 
             lblDiscrepancyTitle.AutoSize = true;
@@ -788,14 +799,14 @@
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.White;
-            ClientSize = new Size(2789, 1465);
+            ClientSize = new Size(1280, 800);
             Controls.Add(tbcMenu);
             Controls.Add(panel1);
-            FormBorderStyle = FormBorderStyle.None;
+            FormBorderStyle = FormBorderStyle.Sizable;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "Form1";
             Text = "Reconciliation Tool";
-            WindowState = FormWindowState.Maximized;
+            WindowState = FormWindowState.Normal;
             panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
             panel2.ResumeLayout(false);
@@ -846,6 +857,7 @@
         private Label lblExternal1DiscrepancyMsg;
         private Button btnExportToCsv;
         private Button btnCompare;
+        private CheckBox chkFuzzyColumns;
         private TabPage tabPage2;
         private Label label3;
         private RadioButton rbInternal;

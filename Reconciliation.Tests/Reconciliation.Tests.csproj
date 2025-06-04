@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -22,6 +22,7 @@
     </PackageReference>
     <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
     <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
+    <Compile Include="../Reconciliation/FuzzyMatcher.cs" Link="FuzzyMatcher.cs" />
   </ItemGroup>
 
 </Project>
