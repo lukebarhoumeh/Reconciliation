@@ -34,17 +34,17 @@ namespace Reconciliation
                 dt.Rows.Add(row);
             }
 
-            NormalizeDataTable(dt);
+            NormalizeRows(dt);
             return dt.DefaultView;
         }
 
         public static DataView NormalizeDataTable(DataTable table)
         {
-            NormalizeDataTable(table);
+            NormalizeRows(table);
             return table.DefaultView;
         }
 
-        private static void NormalizeDataTable(DataTable table)
+        private static void NormalizeRows(DataTable table)
         {
             int line = 1;
             foreach (DataRow row in table.Rows)
@@ -73,7 +73,7 @@ namespace Reconciliation
                     }
                     else if (IsNumericColumn(column.ColumnName))
                     {
-                        string digits = Regex.Replace(cleaned, "[^0-9\\.\-]", string.Empty);
+                        string digits = Regex.Replace(cleaned, "[^0-9.-]", string.Empty);
                         if (!string.IsNullOrWhiteSpace(digits) && decimal.TryParse(digits, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal num))
                         {
                             row[column] = num.ToString(CultureInfo.InvariantCulture);
