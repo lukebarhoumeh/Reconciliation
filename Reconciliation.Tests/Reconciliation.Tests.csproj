@@ -25,6 +25,8 @@
     <Compile Include="../Reconciliation/FuzzyMatcher.cs" Link="FuzzyMatcher.cs" />
     <Compile Include="../Reconciliation/DiscrepancyDetector.cs" Link="DiscrepancyDetector.cs" />
     <Compile Include="../Reconciliation/DataQualityValidator.cs" Link="DataQualityValidator.cs" />
+    <Compile Include="../Reconciliation/DataTableExtensions.cs" Link="DataTableExtensions.cs" />
+    <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
   </ItemGroup>
 
 </Project>
