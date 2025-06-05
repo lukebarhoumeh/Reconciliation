@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace Reconciliation
 {
@@ -19,8 +20,13 @@ namespace Reconciliation
                 if (allowFuzzy && table.TryFuzzyRenameColumn(column))
                     continue;
 
+                var options = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName);
+                var suggestion = FuzzyMatcher.FindClosest(column, options, 4);
                 ErrorLogger.LogMissingColumn(column, fileName);
-                throw new ArgumentException($"The expected column '{column}' is missing from the {fileName} file.");
+                var message = $"The expected column '{column}' is missing from the {fileName} file.";
+                if (suggestion != null)
+                    message += $" Did you mean '{suggestion}'?";
+                throw new ArgumentException(message);
             }
         }
     }

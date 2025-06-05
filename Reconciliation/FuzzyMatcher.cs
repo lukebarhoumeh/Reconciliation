@@ -72,7 +72,7 @@ namespace Reconciliation
         {
             return new string(input
                 .ToLowerInvariant()
-                .Where(c => !char.IsWhiteSpace(c))
+                .Where(char.IsLetterOrDigit)
                 .ToArray());
         }
     }

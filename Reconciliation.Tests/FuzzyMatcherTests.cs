@@ -20,5 +20,13 @@ namespace Reconciliation.Tests
             var result = FuzzyMatcher.FindClosest("subscription id", options);
             Assert.Equal("SubscriptionId", result);
         }
+
+        [Fact]
+        public void FindClosest_IgnoresUnderscoresAndCase()
+        {
+            var options = new List<string> { "sku_id" };
+            var result = FuzzyMatcher.FindClosest("SkuId", options);
+            Assert.Equal("sku_id", result);
+        }
     }
 }
