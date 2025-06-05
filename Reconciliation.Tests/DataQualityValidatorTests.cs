@@ -36,5 +36,23 @@ namespace Reconciliation.Tests
                 File.Delete(path);
             }
         }
+
+        [Fact]
+        public void Warns_When_CriticalField_ExceedsThreshold()
+        {
+            var dt = new DataTable();
+            dt.Columns.Add("CustomerSubTotal");
+            dt.Columns.Add("Quantity");
+            for (int i = 0; i < 10; i++)
+            {
+                var val = i < 2 ? "0" : "1";
+                dt.Rows.Add(val, "1");
+            }
+
+            ErrorLogger.Clear();
+            DataQualityValidator.Run(dt, "test.csv");
+            Assert.Contains(ErrorLogger.Entries,
+                e => e.ColumnName == "CustomerSubTotal");
+        }
     }
 }

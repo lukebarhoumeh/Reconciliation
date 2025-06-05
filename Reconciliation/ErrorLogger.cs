@@ -13,6 +13,10 @@ namespace Reconciliation
         private static readonly List<ErrorLogEntry> _entries = new();
         private static readonly Dictionary<string, int> _errorCounts = new();
         private static readonly Dictionary<string, int> _warningCounts = new();
+        private static readonly Dictionary<string, int> _detailCounts = new();
+        private static readonly Dictionary<string, ErrorLogEntry> _summaries = new();
+
+        public static int MaxDetailedRows { get; set; } = 5;
 
         public static IReadOnlyList<ErrorLogEntry> Entries => _entries.AsReadOnly();
         public static IReadOnlyDictionary<string, int> ErrorSummary => _errorCounts;
@@ -43,9 +47,43 @@ namespace Reconciliation
             string rawValue, string fileName, string context)
         {
             var entry = new ErrorLogEntry(DateTime.Now, level, row, column, description, rawValue, fileName, context);
+            string key = $"{level}|{column}|{description}";
+            int count;
+            lock (_detailCounts)
+            {
+                _detailCounts.TryGetValue(key, out count);
+                count++;
+                _detailCounts[key] = count;
+            }
+
             lock (_entries)
             {
-                _entries.Add(entry);
+                if (count <= MaxDetailedRows)
+                {
+                    _entries.Add(entry);
+                }
+                else
+                {
+                    if (!_summaries.TryGetValue(key, out var summary))
+                    {
+                        summary = new ErrorLogEntry(DateTime.Now, level, -1, column,
+                            $"1 additional rows with the same error in column {column}",
+                            string.Empty, fileName, string.Empty);
+                        _summaries[key] = summary;
+                        _entries.Add(summary);
+                    }
+                    else
+                    {
+                        int idx = _entries.IndexOf(summary);
+                        summary = summary with
+                        {
+                            Timestamp = DateTime.Now,
+                            Description = $"{count - MaxDetailedRows} additional rows with the same error in column {column}"
+                        };
+                        _entries[idx] = summary;
+                        _summaries[key] = summary;
+                    }
+                }
             }
             var counts = level == "Error" ? _errorCounts : _warningCounts;
             lock (counts)
@@ -64,6 +102,8 @@ namespace Reconciliation
                 _entries.Clear();
                 _errorCounts.Clear();
                 _warningCounts.Clear();
+                _detailCounts.Clear();
+                _summaries.Clear();
             }
         }
 
