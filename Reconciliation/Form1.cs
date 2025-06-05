@@ -55,7 +55,7 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnCompare, "Run reconciliation using the loaded files");
             _toolTip.SetToolTip(btnExportToCsv, "Export reconciliation results to CSV");
             _toolTip.SetToolTip(btnExportLogs, "Export parsing and processing logs");
-            _toolTip.SetToolTip(chkFuzzyColumns, "Allow approximate column name matches when importing");
+            _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbExternal.Checked = true;
@@ -294,30 +294,6 @@ namespace Reconciliation
                     }
                     DataQualityValidator.Run(_sixDotOneDataView.Table, fileInfo.Name);
                     SchemaValidator.RequireColumns(_sixDotOneDataView.Table, "MSP Hub invoice", _requiredMspHubColumns, AllowFuzzyColumns);
-                    if (!_sixDotOneDataView.Table.Columns.Contains("SkuId"))
-                    {
-                        // Check if the second column name is found
-                        if (_sixDotOneDataView.Table.Columns.Contains("SkuName"))
-                        {
-                            // Rename the column to "test"
-                            _sixDotOneDataView.Table.Columns["SkuName"].ColumnName = "SkuId";
-
-                        }
-                        // Check if the second column name is found
-                        else if (_sixDotOneDataView.Table.Columns.Contains("Sku"))
-                        {
-                            // Rename the column to "test"
-                            _sixDotOneDataView.Table.Columns["Sku"].ColumnName = "SkuId";
-
-                        }
-                        else
-                        {
-                            _sixDotOneDataView.Table.Clear();
-                            ErrorLogger.LogMissingColumn("SkuId", "MSP Hub invoice");
-                            throw new ArgumentException("The expected column 'SkuId' is missing from the MSP Hub invoice CSV.");
-
-                        }
-                    }
                     if (_sixDotOneDataView != null && _sixDotOneDataView.Table.Columns.Contains("SkuId"))
                     {
                         foreach (DataRowView rowView in _sixDotOneDataView)
