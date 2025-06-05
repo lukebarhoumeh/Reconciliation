@@ -13,13 +13,24 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
+      # Restore project dependencies
       - run: dotnet restore "Reconciliation Tool.sln"
+      # Build solution without restoring again
       - run: dotnet build "Reconciliation Tool.sln" --no-restore --configuration Release
-      - run: dotnet test "Reconciliation.Tests/Reconciliation.Tests.csproj" --no-build --configuration Release --logger "trx" --results-directory "TestResults"
-        continue-on-error: false
+      # Execute test suite and write results to TestResults directory
+      - name: Run Tests
+        run: |
+          mkdir -p TestResults
+          dotnet test "Reconciliation.Tests/Reconciliation.Tests.csproj" \
+            --no-build --configuration Release \
+            --logger "trx" --results-directory "TestResults"
+      # Warn if TestResults directory is missing or empty
+      - name: Check Test Results Directory
+        run: scripts/check_test_results.sh TestResults
+      # Upload test results artifact when files exist
       - name: Upload Test Results
+        if: ${{ always() && hashFiles('TestResults/**') != '' }}
         uses: actions/upload-artifact@v3
-        if: always()
         with:
           name: test-results
           path: TestResults

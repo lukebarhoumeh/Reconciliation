@@ -46,6 +46,11 @@ Sample templates are available under `samples/`.
 ### Running Tests
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
 
+Test results are written to the `TestResults` directory by the CI workflow and
+uploaded as an artifact when available. If no results are produced the workflow
+logs a warning rather than failing the build.
+See the workflow run summary for links to download artifacts.
+
 - Fuzzy column matching with optional checkbox in the UI. Common variants such
   as `SkuName`, `SKU` or `sku_id` are automatically mapped to `SkuId` during
   import.
