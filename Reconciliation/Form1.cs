@@ -20,6 +20,8 @@ namespace Reconciliation
         private DataView _microsoftDataView, _sixDotOneDataView, _resultData, _pricematchDataView;
         private string[] _uniqueKeyColumns = ["CustomerDomainName", "ProductId", "SkuId", "ChargeType", "Term", "BillingCycle"];
         private string[] _columnsToBeDeleted = { "CustomerCountry", "MpnId", "AvailabilityId", "Currency", "PriceAdjustmentDescription", "PublisherName", "PublisherId", "ProductQualifiers", "ReferenceId", "MeterDescription", "PCToBCExchangeRateDate", "PCToBCExchangeRate", "PricingCurrency", "BillableQuantity", "AlternateId", "UnitType" };
+        private readonly string[] _requiredMicrosoftColumns = ["CustomerDomainName", "ProductId", "SkuId", "ChargeType", "TermAndBillingCycle"];
+        private readonly string[] _requiredMspHubColumns = ["InternalReferenceId", "SkuId", "BillingCycle"];
         private int hoveredIndex = -1;
         private bool isSwitchingMode = false;
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
@@ -211,10 +213,15 @@ namespace Reconciliation
 
                     // Load CSV data
                     _microsoftDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
+                    if (_microsoftDataView.Table.Rows.Count == 0)
+                    {
+                        ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
+                        throw new ArgumentException("The selected file contains no rows.");
+                    }
                     DataQualityValidator.Run(_microsoftDataView.Table, fileInfo.Name);
 
                     // Validate file structure
-                    ValidateMicrosoftInvoice(_microsoftDataView.Table, "TermAndBillingCycle");
+                    SchemaValidator.RequireColumns(_microsoftDataView.Table, "Microsoft invoice", _requiredMicrosoftColumns, AllowFuzzyColumns);
 
                     // Filter out Azure plan rows
                     for (int i = _microsoftDataView.Count - 1; i >= 0; i--)
@@ -280,8 +287,13 @@ namespace Reconciliation
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     var size = FormatSize(fileInfo.Length);
                     _sixDotOneDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
+                    if (_sixDotOneDataView.Table.Rows.Count == 0)
+                    {
+                        ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
+                        throw new ArgumentException("The selected file contains no rows.");
+                    }
                     DataQualityValidator.Run(_sixDotOneDataView.Table, fileInfo.Name);
-                    ValidateSixDotOneInvoice(_sixDotOneDataView.Table, "InternalReferenceId");
+                    SchemaValidator.RequireColumns(_sixDotOneDataView.Table, "MSP Hub invoice", _requiredMspHubColumns, AllowFuzzyColumns);
                     if (!_sixDotOneDataView.Table.Columns.Contains("SkuId"))
                     {
                         // Check if the second column name is found
@@ -653,30 +665,15 @@ namespace Reconciliation
 
             return $"{number:n1} {suffixes[counter]}";
         }
+        // Legacy validation methods retained for backward compatibility
         private void ValidateMicrosoftInvoice(DataTable dataTable, string columnName)
         {
-            if (!dataTable.Columns.Contains(columnName))
-            {
-                if (AllowFuzzyColumns && dataTable.TryFuzzyRenameColumn(columnName))
-                {
-                    return;
-                }
-                ErrorLogger.LogMissingColumn(columnName, "Microsoft invoice");
-                throw new ArgumentException($"The expected column '{columnName}' is missing from the Microsoft invoice CSV.");
-            }
+            SchemaValidator.RequireColumns(dataTable, "Microsoft invoice", new[] { columnName }, AllowFuzzyColumns);
         }
 
         private void ValidateSixDotOneInvoice(DataTable dataTable, string columnName)
         {
-            if (!dataTable.Columns.Contains(columnName))
-            {
-                if (AllowFuzzyColumns && dataTable.TryFuzzyRenameColumn(columnName))
-                {
-                    return;
-                }
-                ErrorLogger.LogMissingColumn(columnName, "MSP Hub invoice");
-                throw new ArgumentException($"The expected column '{columnName}' is missing from the MSP Hub invoice CSV.");
-            }
+            SchemaValidator.RequireColumns(dataTable, "MSP Hub invoice", new[] { columnName }, AllowFuzzyColumns);
         }
         private void SplitColumn(DataTable dataTable, string sourceColumnName, string termColumnName, string billingCycleColumnName)
         {

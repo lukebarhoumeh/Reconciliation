@@ -4,6 +4,14 @@ MSP HUB RECONCILATION TOOL
 ## CSV Normalization
 The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings. Validation errors are exported as structured CSV files for easy review.
 
+### Required Columns
+Both invoice types are validated after import. Missing columns abort the run and are logged.
+
+- **Microsoft invoice** must include: `CustomerDomainName`, `ProductId`, `SkuId`, `ChargeType`, `TermAndBillingCycle`.
+- **MSP Hub invoice** must include: `InternalReferenceId`, `SkuId`, `BillingCycle`.
+
+Sample templates are available under `samples/`.
+
 ### Running Tests
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
 
