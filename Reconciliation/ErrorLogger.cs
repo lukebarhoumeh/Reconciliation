@@ -6,7 +6,8 @@ using System.Linq;
 namespace Reconciliation
 {
     public record ErrorLogEntry(DateTime Timestamp, string ErrorLevel, int RowNumber,
-        string ColumnName, string Description, string RawValue, string FileName, string Context);
+        string ColumnName, string Description, string RawValue, string FileName, string Context,
+        bool IsSummary = false);
 
     public static class ErrorLogger
     {
@@ -15,6 +16,11 @@ namespace Reconciliation
         private static readonly Dictionary<string, int> _warningCounts = new();
         private static readonly Dictionary<string, int> _detailCounts = new();
         private static readonly Dictionary<string, ErrorLogEntry> _summaries = new();
+
+        static ErrorLogger()
+        {
+            MaxDetailedRows = AppConfig.Logging.MaxDetailedRows;
+        }
 
         public static int MaxDetailedRows { get; set; } = 5;
 
@@ -46,6 +52,7 @@ namespace Reconciliation
         private static void Add(string level, int row, string column, string description,
             string rawValue, string fileName, string context)
         {
+            rawValue = string.IsNullOrWhiteSpace(rawValue) ? string.Empty : rawValue;
             var entry = new ErrorLogEntry(DateTime.Now, level, row, column, description, rawValue, fileName, context);
             string key = $"{level}|{column}|{description}";
             int count;
@@ -67,8 +74,8 @@ namespace Reconciliation
                     if (!_summaries.TryGetValue(key, out var summary))
                     {
                         summary = new ErrorLogEntry(DateTime.Now, level, -1, column,
-                            $"1 additional rows with the same error in column {column}",
-                            string.Empty, fileName, string.Empty);
+                            $"1 additional rows had the same error: {description}",
+                            string.Empty, fileName, string.Empty, true);
                         _summaries[key] = summary;
                         _entries.Add(summary);
                     }
@@ -78,7 +85,7 @@ namespace Reconciliation
                         summary = summary with
                         {
                             Timestamp = DateTime.Now,
-                            Description = $"{count - MaxDetailedRows} additional rows with the same error in column {column}"
+                            Description = $"{count - MaxDetailedRows} additional rows had the same error: {description}"
                         };
                         _entries[idx] = summary;
                         _summaries[key] = summary;
@@ -119,8 +126,9 @@ namespace Reconciliation
             {
                 foreach (var e in _entries)
                 {
+                    var ts = e.IsSummary ? "Summary" : e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
                     lines.Add(string.Join(',',
-                        e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
+                        ts,
                         e.ErrorLevel,
                         e.RowNumber > 0 ? e.RowNumber.ToString() : "-",
                         Escape(e.ColumnName),

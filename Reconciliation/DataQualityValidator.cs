@@ -97,7 +97,7 @@ namespace Reconciliation
                         if (val < 0)
                         {
                             ErrorLogger.LogWarning(rowIndex, c.ColumnName,
-                                "Negative total value", val.ToString(CultureInfo.InvariantCulture),
+                                "Negative total value", raw,
                                 fileName, ctx);
                         }
                     }
@@ -164,9 +164,10 @@ namespace Reconciliation
 
         private static string GetValue(DataRow row, string column)
         {
-            return row.Table.Columns.Contains(column)
-                ? Convert.ToString(row[column]) ?? string.Empty
-                : string.Empty;
+            if (!row.Table.Columns.Contains(column))
+                return "(missing)";
+            string value = Convert.ToString(row[column]) ?? string.Empty;
+            return string.IsNullOrWhiteSpace(value) ? "(missing)" : value;
         }
     }
 }
