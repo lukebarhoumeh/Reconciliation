@@ -1,6 +1,28 @@
 # Reconciliation
 MSP HUB RECONCILATION TOOL
 
+## Build
+Requires .NET 8 SDK. Restore and build the solution:
+
+```bash
+dotnet build "Reconciliation Tool.sln"
+```
+
+Run the tests:
+
+```bash
+dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj
+```
+
+## Usage
+Start the application and select two invoice CSV files. Sample files live under `samples/`.
+
+```bash
+Reconciliation.exe microsoft.csv msphub.csv
+```
+
+Adjust tolerances in `Reconciliation/appsettings.json` if default numeric or date thresholds do not match your workflow.
+
 ## CSV Normalization
 The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings. Validation errors are exported as structured CSV files for easy review.
 
@@ -49,3 +71,10 @@ File.WriteAllText("summary.txt", detector.GetSummary());
 
 `diff.csv` will contain rows with the left and right values plus a reason for
 each discrepancy.
+
+## Advanced usage
+Use the **Export** menu to save error logs or comparison results. Add additional fuzzy column variants by editing `DataTableExtensions.ColumnVariants`.
+
+## Troubleshooting
+- Ensure CSV files are UTF-8 with comma delimiters.
+- Missing rows are often caused by mismatched column headers – check the mappings and adjust `appsettings.json` thresholds if needed.

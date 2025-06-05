@@ -15,13 +15,13 @@ namespace Reconciliation
     public class DiscrepancyDetector
     {
         /// <summary>Maximum numeric difference considered equal.</summary>
-        public decimal NumericTolerance { get; set; } = 0.01m;
+        public decimal NumericTolerance { get; set; } = AppConfig.Validation.NumericTolerance;
 
         /// <summary>Maximum allowed days between two dates to be considered equal.</summary>
-        public TimeSpan DateTolerance { get; set; } = TimeSpan.FromDays(0);
+        public TimeSpan DateTolerance { get; set; } = TimeSpan.FromDays(AppConfig.Validation.DateToleranceDays);
 
         /// <summary>Maximum Levenshtein distance for textual fields.</summary>
-        public int TextDistance { get; set; } = 2;
+        public int TextDistance { get; set; } = AppConfig.Validation.TextDistance;
 
         private readonly List<Discrepancy> _discrepancies = new();
         private readonly Dictionary<string, int> _summary = new();

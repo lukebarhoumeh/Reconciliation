@@ -17,6 +17,11 @@
     <PackageReference Include="EPPlus" Version="7.6.1" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Update="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
