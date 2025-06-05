@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing;
 
 namespace Reconciliation
 {
@@ -22,11 +23,11 @@ namespace Reconciliation
 
                 foreach (var item in row.ItemArray)
                 {
-                    if (item.ToString().Contains(MismatchValueIdentifier.MicrosoftTable))
+                    if (item.ToString().Contains(MismatchValueIdentifier.MicrosoftMarker))
                     {
                         return Brushes.Transparent;
                     }
-                    if (item.ToString().Contains(MismatchValueIdentifier.SixDotOneTable))
+                    if (item.ToString().Contains(MismatchValueIdentifier.SixDotOneMarker))
                     {
                         return Brushes.LightYellow;
                     }

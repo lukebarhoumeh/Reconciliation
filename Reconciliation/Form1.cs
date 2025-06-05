@@ -1056,8 +1056,8 @@ namespace Reconciliation
                     continue;
 
                 string cellValue = row[column].ToString();
-                string cleanedValue = cellValue.Replace(MismatchValueIdentifier.MicrosoftTable, "")
-                                               .Replace(MismatchValueIdentifier.SixDotOneTable, "");
+                string cleanedValue = cellValue.Replace(MismatchValueIdentifier.MicrosoftMarker, "")
+                                               .Replace(MismatchValueIdentifier.SixDotOneMarker, "");
 
                 // Set cell value
                 var cell = rowRange[rowRange.Start.Row, columnIndex];
@@ -1078,8 +1078,8 @@ namespace Reconciliation
                     cell.Style.Fill.BackgroundColor.SetColor(Color.Yellow);
                     cell.Style.Font.Color.SetColor(Color.Black); // Black text for contrast
                 }
-                else if (cellValue.Contains(MismatchValueIdentifier.MicrosoftTable) ||
-                         cellValue.Contains(MismatchValueIdentifier.SixDotOneTable))
+                else if (cellValue.Contains(MismatchValueIdentifier.MicrosoftMarker) ||
+                         cellValue.Contains(MismatchValueIdentifier.SixDotOneMarker))
                 {
                     // 🟡 Yellow highlight for mismatches
                     cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -1781,14 +1781,14 @@ namespace Reconciliation
                             _microsoftDataView.Table,
                             _sixDotOneDataView.Table,
                             _uniqueKeyColumns,
-                            MismatchValueIdentifier.MicrosoftTable
+                            MismatchValueIdentifier.MicrosoftMarker
                         );
 
                         var mismatchFromSixDotOne = FindMismatchedRowsFromSixDotOne(
                            _sixDotOneDataView.Table,
                            _microsoftDataView.Table,
                            _uniqueKeyColumns,
-                           MismatchValueIdentifier.SixDotOneTable
+                           MismatchValueIdentifier.SixDotOneMarker
                         );
 
                         return CombineMismatchedResults(mismatchFromMicrosoft, mismatchFromSixDotOne);
@@ -2288,8 +2288,8 @@ namespace Reconciliation
                     if (cell.Value != null)
                     {
                         string cellValue = cell.Value.ToString();
-                        if (cellValue.Contains(MismatchValueIdentifier.MicrosoftTable) ||
-                            cellValue.Contains(MismatchValueIdentifier.SixDotOneTable))
+                        if (cellValue.Contains(MismatchValueIdentifier.MicrosoftMarker) ||
+                            cellValue.Contains(MismatchValueIdentifier.SixDotOneMarker))
                         {
                             row.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#EEDC5B"); // Yellow for mismatch
                             return;

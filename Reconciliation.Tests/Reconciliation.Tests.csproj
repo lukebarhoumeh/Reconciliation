@@ -20,6 +20,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <None Include="../Reconciliation/appsettings.json">
+      <Link>appsettings.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Compile Include="../Reconciliation/AppConfig.cs" Link="AppConfig.cs" />
     <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
     <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
     <Compile Include="../Reconciliation/FuzzyMatcher.cs" Link="FuzzyMatcher.cs" />
@@ -27,6 +32,9 @@
     <Compile Include="../Reconciliation/DataQualityValidator.cs" Link="DataQualityValidator.cs" />
     <Compile Include="../Reconciliation/DataTableExtensions.cs" Link="DataTableExtensions.cs" />
     <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
+    <None Include="TestData\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

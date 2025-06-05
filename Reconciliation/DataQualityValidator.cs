@@ -2,12 +2,13 @@ using System;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Reconciliation
 {
     public static class DataQualityValidator
     {
-        private const decimal BlankThreshold = 0.1m;
+        private static decimal BlankThreshold => AppConfig.Validation.BlankThreshold;
         private static readonly string[] CriticalFields =
         {
             "CustomerSubTotal",

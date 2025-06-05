@@ -8,7 +8,13 @@ namespace Reconciliation
     {
         private static readonly Dictionary<string, string[]> ColumnVariants = new()
         {
-            ["SkuId"] = ["SkuName", "Sku", "SKU", "sku_id"],
+            ["SkuId"] = ["SkuName", "Sku", "SKU", "sku_id", "ItemNo"],
+            ["CustomerId"] = ["CustomerID", "Customer_Id", "CustomerNumber"],
+            ["Quantity"] = ["QuantityOrdered", "Qty", "qty_ordered"],
+            ["ProductId"] = ["ProductID", "ProductCode", "ItemNo"],
+            ["OrderDate"] = ["DateOrdered", "Order_Date"],
+            ["CustomerDomainName"] = ["CustomerDomain", "DomainName"],
+            ["BillingCycle"] = ["Billing_Cycle", "BillingPeriod"],
         };
         /// <summary>
         /// Attempt to rename a column in <paramref name="table"/> to <paramref name="expected"/> using fuzzy matching.
