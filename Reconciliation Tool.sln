@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reconciliation", "Reconcili
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reconciliation.Tests", "Reconciliation.Tests\Reconciliation.Tests.csproj", "{537EFA54-85BD-4EE4-B9D7-CDF2C72E8589}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reconciliation.Cli", "Reconciliation.Cli\Reconciliation.Cli.csproj", "{496B0353-8580-4DC1-8017-18979C603371}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{537EFA54-85BD-4EE4-B9D7-CDF2C72E8589}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{537EFA54-85BD-4EE4-B9D7-CDF2C72E8589}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{537EFA54-85BD-4EE4-B9D7-CDF2C72E8589}.Release|Any CPU.Build.0 = Release|Any CPU
+		{496B0353-8580-4DC1-8017-18979C603371}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{496B0353-8580-4DC1-8017-18979C603371}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{496B0353-8580-4DC1-8017-18979C603371}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{496B0353-8580-4DC1-8017-18979C603371}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

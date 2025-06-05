@@ -1,5 +1,5 @@
 # Reconciliation
-MSP HUB RECONCILATION TOOL
+MSP HUB RECONCILATION TOOL ![CI](https://github.com/atlas/unknown/actions/workflows/dotnet.yml/badge.svg)
 
 ## Build
 Requires .NET 8 SDK. Restore and build the solution:
@@ -15,8 +15,15 @@ dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj
 ```
 
 ## Usage
-Start the application and select two invoice CSV files. Sample files live under `samples/`.
+Start the Windows GUI or use the CLI for automation. Sample files live under `samples/`.
 
+### CLI
+```bash
+dotnet run --project Reconciliation.Cli -- --left microsoft.csv --right msphub.csv \
+    --output-diff diff.csv --output-log errors.csv
+```
+
+### GUI
 ```bash
 Reconciliation.exe microsoft.csv msphub.csv
 ```
@@ -38,6 +45,12 @@ Sample templates are available under `samples/`.
 
 ### Running Tests
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
+
+Test results are written to the `TestResults` directory by the CI workflow and
+uploaded as an artifact only when files exist. The workflow checks the
+directory after test execution and logs a warning if it is missing or empty
+without failing the build.
+See the workflow run summary for links to download artifacts.
 
 - Fuzzy column matching with optional checkbox in the UI. Common variants such
   as `SkuName`, `SKU` or `sku_id` are automatically mapped to `SkuId` during
@@ -65,12 +78,16 @@ After running a comparison you can export results:
 ```csharp
 var detector = new DiscrepancyDetector();
 detector.Compare(tableA, tableB);
+
 detector.ExportCsv("diff.csv");
 File.WriteAllText("summary.txt", detector.GetSummary());
 ```
 
 `diff.csv` will contain rows with the left and right values plus a reason for
 each discrepancy.
+## Performance
+Streaming CSV reading is available via `CsvNormalizer.StreamCsv` for large files. Current normalization loads files into memory; future work will refactor to use full streaming.
+
 
 ## Advanced usage
 Use the **Export** menu to save error logs or comparison results. Add additional fuzzy column variants by editing `DataTableExtensions.ColumnVariants`.

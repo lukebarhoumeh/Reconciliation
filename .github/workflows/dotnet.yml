@@ -1,0 +1,58 @@
+name: .NET
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      # Restore project dependencies
+      - run: dotnet restore "Reconciliation Tool.sln"
+      # Build solution without restoring again
+      - run: dotnet build "Reconciliation Tool.sln" --no-restore --configuration Release
+      # Execute test suite and write results to TestResults directory
+      - name: Run Tests
+        run: |
+          mkdir -p TestResults
+          dotnet test "Reconciliation.Tests/Reconciliation.Tests.csproj" \
+            --no-build --configuration Release \
+            --logger "trx" --results-directory "TestResults"
+      # Determine whether to upload test results
+      - name: Check for Test Results
+        id: check_test_results
+        run: |
+          if [ -d "TestResults" ] && [ "$(ls -A TestResults)" ]; then
+            echo "::set-output name=upload_artifact::true"
+          else
+            echo "::set-output name=upload_artifact::false"
+          fi
+      # Upload test results artifact only when files exist
+      - name: Upload Test Results
+        if: steps.check_test_results.outputs.upload_artifact == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: TestResults
+
+  publish:
+    # Package the CLI when a release is tagged
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet publish Reconciliation.Cli/Reconciliation.Cli.csproj -c Release -o publish
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: reconciliation-cli
+          path: publish
