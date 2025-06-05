@@ -24,18 +24,25 @@ jobs:
           dotnet test "Reconciliation.Tests/Reconciliation.Tests.csproj" \
             --no-build --configuration Release \
             --logger "trx" --results-directory "TestResults"
-      # Warn if TestResults directory is missing or empty
-      - name: Check Test Results Directory
-        run: scripts/check_test_results.sh TestResults
-      # Upload test results artifact when files exist
+      # Determine whether to upload test results
+      - name: Check for Test Results
+        id: check_test_results
+        run: |
+          if [ -d "TestResults" ] && [ "$(ls -A TestResults)" ]; then
+            echo "::set-output name=upload_artifact::true"
+          else
+            echo "::set-output name=upload_artifact::false"
+          fi
+      # Upload test results artifact only when files exist
       - name: Upload Test Results
-        if: ${{ always() && hashFiles('TestResults/**') != '' }}
+        if: steps.check_test_results.outputs.upload_artifact == 'true'
         uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: TestResults
 
   publish:
+    # Package the CLI when a release is tagged
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:

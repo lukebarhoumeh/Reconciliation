@@ -14,5 +14,5 @@
 - GitHub Actions workflow for build and tests.
 - Streaming CSV prototype via `CsvNormalizer.StreamCsv`.
 - Additional fuzzy column variants for international data.
-- GitHub Actions now uploads test results when present and logs a warning if the
-  directory is empty.
+- GitHub Actions now checks for the `TestResults` directory and uploads
+  artifacts only when files exist, logging a warning otherwise.

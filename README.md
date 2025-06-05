@@ -47,8 +47,9 @@ Sample templates are available under `samples/`.
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
 
 Test results are written to the `TestResults` directory by the CI workflow and
-uploaded as an artifact when available. If no results are produced the workflow
-logs a warning rather than failing the build.
+uploaded as an artifact only when files exist. The workflow checks the
+directory after test execution and logs a warning if it is missing or empty
+without failing the build.
 See the workflow run summary for links to download artifacts.
 
 - Fuzzy column matching with optional checkbox in the UI. Common variants such
