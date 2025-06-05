@@ -9,12 +9,17 @@ namespace Reconciliation
     /// </summary>
     public static class AppConfig
     {
-        /// <summary>Validation-related options.</summary>
-        public static ValidationOptions Validation { get; } = Load();
+        private static readonly ConfigRoot _root = Load();
 
-        private static ValidationOptions Load()
+        /// <summary>Validation-related options.</summary>
+        public static ValidationOptions Validation => _root.Validation!;
+
+        /// <summary>Logging-related options.</summary>
+        public static LoggingOptions Logging => _root.Logging!;
+
+        private static ConfigRoot Load()
         {
-            var defaults = new ValidationOptions();
+            var defaults = new ConfigRoot();
             try
             {
                 string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
@@ -22,20 +27,27 @@ namespace Reconciliation
                 {
                     var json = File.ReadAllText(path);
                     var root = JsonSerializer.Deserialize<ConfigRoot>(json);
-                    if (root?.Validation != null)
-                        return root.Validation;
+                    if (root != null)
+                    {
+                        root.Validation ??= new ValidationOptions();
+                        root.Logging ??= new LoggingOptions();
+                        return root;
+                    }
                 }
             }
             catch
             {
                 // ignore and use defaults
             }
+            defaults.Validation ??= new ValidationOptions();
+            defaults.Logging ??= new LoggingOptions();
             return defaults;
         }
 
         private class ConfigRoot
         {
             public ValidationOptions? Validation { get; set; }
+            public LoggingOptions? Logging { get; set; }
         }
     }
 
@@ -48,5 +60,13 @@ namespace Reconciliation
         public int DateToleranceDays { get; set; } = 0;
         public int TextDistance { get; set; } = 2;
         public decimal BlankThreshold { get; set; } = 0.1m;
+    }
+
+    /// <summary>
+    /// Options controlling error log output.
+    /// </summary>
+    public class LoggingOptions
+    {
+        public int MaxDetailedRows { get; set; } = 5;
     }
 }

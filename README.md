@@ -21,7 +21,7 @@ Start the application and select two invoice CSV files. Sample files live under 
 Reconciliation.exe microsoft.csv msphub.csv
 ```
 
-Adjust tolerances in `Reconciliation/appsettings.json` if default numeric or date thresholds do not match your workflow.
+Adjust tolerances in `Reconciliation/appsettings.json` if default numeric or date thresholds do not match your workflow. The `Logging` section controls the number of detailed error rows kept before a summary line is written.
 
 ## CSV Normalization
 The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings. Validation errors are exported as structured CSV files for easy review.
