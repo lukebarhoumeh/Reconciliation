@@ -10,3 +10,7 @@
 - Error log deduplication with configurable summary rows.
 - Raw value logging now captures only the offending cell content.
 - Context values always include customer and SKU or `(missing)` placeholders.
+- Added headless CLI tool with config support.
+- GitHub Actions workflow for build and tests.
+- Streaming CSV prototype via `CsvNormalizer.StreamCsv`.
+- Additional fuzzy column variants for international data.

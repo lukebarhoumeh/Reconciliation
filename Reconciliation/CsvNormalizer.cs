@@ -2,6 +2,7 @@ using Microsoft.VisualBasic.FileIO;
 using System.Data;
 using System.Globalization;
 using System.IO;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Reconciliation
@@ -37,6 +38,34 @@ namespace Reconciliation
 
             NormalizeRows(dt, Path.GetFileName(filePath));
             return dt.DefaultView;
+        }
+
+        public static IEnumerable<DataRow> StreamCsv(string filePath)
+        {
+            using var parser = new TextFieldParser(filePath);
+            parser.SetDelimiters(",");
+            parser.HasFieldsEnclosedInQuotes = true;
+            var table = new DataTable();
+
+            if (!parser.EndOfData)
+            {
+                var headers = parser.ReadFields() ?? Array.Empty<string>();
+                foreach (var h in headers)
+                {
+                    table.Columns.Add(CleanString(h));
+                }
+            }
+
+            while (!parser.EndOfData)
+            {
+                var fields = parser.ReadFields() ?? Array.Empty<string>();
+                var row = table.NewRow();
+                for (int i = 0; i < table.Columns.Count; i++)
+                {
+                    row[i] = i < fields.Length ? fields[i] : string.Empty;
+                }
+                yield return row;
+            }
         }
 
         public static DataView NormalizeDataTable(DataTable table)

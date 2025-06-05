@@ -1,0 +1,40 @@
+name: .NET
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore "Reconciliation Tool.sln"
+      - run: dotnet build "Reconciliation Tool.sln" --no-restore --configuration Release
+      - run: dotnet test "Reconciliation.Tests/Reconciliation.Tests.csproj" --no-build --configuration Release --logger "trx" --results-directory "TestResults"
+        continue-on-error: false
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: TestResults
+
+  publish:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet publish Reconciliation.Cli/Reconciliation.Cli.csproj -c Release -o publish
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: reconciliation-cli
+          path: publish

@@ -22,7 +22,10 @@ namespace Reconciliation
             var defaults = new ConfigRoot();
             try
             {
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                string envPath = Environment.GetEnvironmentVariable("RECONCILIATION_CONFIG_PATH") ?? string.Empty;
+                string path = !string.IsNullOrWhiteSpace(envPath)
+                    ? envPath
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
                 if (File.Exists(path))
                 {
                     var json = File.ReadAllText(path);

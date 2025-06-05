@@ -8,9 +8,9 @@ namespace Reconciliation
     {
         private static readonly Dictionary<string, string[]> ColumnVariants = new()
         {
-            ["SkuId"] = ["SkuName", "Sku", "SKU", "sku_id", "ItemNo"],
+            ["SkuId"] = ["SkuName", "Sku", "SKU", "sku_id", "ItemNo", "Artikelnummer"],
             ["CustomerId"] = ["CustomerID", "Customer_Id", "CustomerNumber"],
-            ["Quantity"] = ["QuantityOrdered", "Qty", "qty_ordered"],
+            ["Quantity"] = ["QuantityOrdered", "Qty", "qty_ordered", "Quantité", "OrderQty"],
             ["ProductId"] = ["ProductID", "ProductCode", "ItemNo"],
             ["OrderDate"] = ["DateOrdered", "Order_Date"],
             ["CustomerDomainName"] = ["CustomerDomain", "DomainName"],
