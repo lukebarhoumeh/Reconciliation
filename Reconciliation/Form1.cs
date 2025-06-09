@@ -331,7 +331,7 @@ namespace Reconciliation
                         var startTime = DateTime.Now; // Capture start time
 
                         // Validate records
-                        var invalidRecordsTable = ValidateInvalidRecords(_sixDotOneDataView.Table);
+                        var invalidRecordsTable = new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
                         return invalidRecordsTable.DefaultView; // Convert DataTable to DataView
                     });
 
@@ -1067,183 +1067,8 @@ namespace Reconciliation
         // TODO: External reconciliation logic moved to ReconciliationService
         #endregion Compare_Logic
 
-        #region Validate_Logic
-        private DataTable ValidateInvalidRecords(DataTable msbHubdataTable)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            try
-            {
-                AppendLog("******************** MSP Hub Invoice Validation Run ********************");
-                AppendLog($"\nMSP Hub Invoice Validation started at: {DateTime.Now}");
+        // TODO: Validation logic moved to InvoiceValidationService
 
-                int totalRows = msbHubdataTable.Rows.Count;
-                int highPriorityErrors = 0, lowPriorityErrors = 0;
-                AppendLog($"\nTotal Rows: {totalRows}");
-
-                EnsureValidationColumns(msbHubdataTable);
-                List<DataRow> rowsToRemove = new List<DataRow>();
-
-                foreach (DataRow row in msbHubdataTable.Rows)
-                {
-                    try
-                    {
-                        bool isInvalid = ValidateRow(msbHubdataTable, row, ref highPriorityErrors, ref lowPriorityErrors);
-                        if (!isInvalid) rowsToRemove.Add(row);
-                    }
-                    catch (Exception ex)
-                    {
-                        AppendLog($"Error validating row: {ex.Message}");
-                    }
-                }
-
-                RemoveValidRows(msbHubdataTable, rowsToRemove);
-                LogValidationSummary(stopwatch, msbHubdataTable.Rows.Count, highPriorityErrors, lowPriorityErrors);
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Critical error in ValidateInvalidRecords: {ex.Message}");
-            }
-            return msbHubdataTable;
-        }
-        private void EnsureValidationColumns(DataTable table)
-        {
-            try
-            {
-                string[] validationColumns = { "Eff. Days Validation", "Partner Discount Validation", "Discount Hierarchy Check", "Pricing Consistency Check" };
-                foreach (var column in validationColumns)
-                {
-                    if (!table.Columns.Contains(column))
-                    {
-                        table.Columns.Add(column, typeof(string));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Error ensuring validation columns: {ex.Message}");
-            }
-        }
-        private bool ValidateRow(DataTable table, DataRow row, ref int highPriorityErrors, ref int lowPriorityErrors)
-        {
-            try
-            {
-                string startDateColumn = table.Columns.Contains("ChargeStartDate") ? "ChargeStartDate" : "ValidFrom";
-                string endDateColumn = table.Columns.Contains("ChargeEndDate") ? "ChargeEndDate" : "ValidTo";
-                string msrpColumn = table.Columns.Contains("MSRP") ? "MSRP" : "MSRPPrice";
-
-                // Safe date parsing
-                DateTime validFrom;
-                string fromVal = SafeGetString(row, startDateColumn);
-                validFrom = DateTime.TryParse(fromVal, out var tmpFrom) ? tmpFrom : DateTime.MinValue;
-
-                DateTime validTo;
-                string toVal = SafeGetString(row, endDateColumn);
-                validTo = DateTime.TryParse(toVal, out var tmpTo) ? tmpTo : DateTime.MinValue;
-
-                int effectiveDays = SafeGetString(row, "EffectiveDays") != "" ? Convert.ToInt32(SafeGetString(row, "EffectiveDays")) : 0;
-                int calculatedDays = (validTo.Date - validFrom.Date).Days + 1;
-
-                decimal msrpPrice = SafeConvertToDecimal(SafeGetString(row, msrpColumn));
-                decimal partnerDiscountPercentage = SafeConvertToDecimal(SafeGetString(row, "PartnerDiscountPercentage"));
-                decimal customerDiscountPercentage = SafeConvertToDecimal(SafeGetString(row, "CustomerDiscountPercentage"));
-                decimal partnerTotal = SafeConvertToDecimal(SafeGetString(row, "Total"));
-                decimal customerSubtotal = SafeConvertToDecimal(SafeGetString(row, "CustomerSubtotal"));
-
-                bool isInvalid = false;
-
-                if (calculatedDays != effectiveDays)
-                {
-                    row["Eff. Days Validation"] = $"Mismatch: Expected EffectiveDays is {calculatedDays} days, but found {effectiveDays} days.";
-                    isInvalid = true;
-                    highPriorityErrors++;
-                }
-
-                if (msrpPrice > 5)
-                {
-                    decimal minDiscount = 18.00m, maxDiscount = 20.00m;
-                    if (partnerDiscountPercentage <= 0)
-                    {
-                        row["Partner Discount Validation"] = $"Invalid: MSRP ({msrpPrice}) is greater than 5, but PartnerDiscountPercentage is {partnerDiscountPercentage}%.";
-                        isInvalid = true;
-                        highPriorityErrors++;
-                    }
-                    else if (partnerDiscountPercentage < minDiscount || partnerDiscountPercentage > maxDiscount)
-                    {
-                        row["Partner Discount Validation"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage:F2}%) is not between {minDiscount:F2}% and {maxDiscount:F2}%.";
-                        isInvalid = true;
-                        highPriorityErrors++;
-                    }
-                }
-
-                if (partnerDiscountPercentage < customerDiscountPercentage)
-                {
-                    row["Discount Hierarchy Check"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage}%) is less than CustomerDiscountPercentage ({customerDiscountPercentage}%).";
-                    isInvalid = true;
-                    lowPriorityErrors++;
-                }
-
-                if (Math.Abs(partnerTotal) > Math.Abs(customerSubtotal))
-                {
-                    row["Pricing Consistency Check"] = $"Invalid: PartnerTotal ({partnerTotal}) is greater than CustomerSubTotal ({customerSubtotal}).";
-                    isInvalid = true;
-                    lowPriorityErrors++;
-                }
-
-                return isInvalid;
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Error validating row: {ex.Message}");
-                return false;
-            }
-        }
-        private void RemoveValidRows(DataTable table, List<DataRow> rowsToRemove)
-        {
-            try
-            {
-                foreach (var row in rowsToRemove)
-                {
-                    table.Rows.Remove(row);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Error removing valid rows: {ex.Message}");
-            }
-        }
-        private void LogValidationSummary(Stopwatch stopwatch, int totalErrors, int highPriorityErrors, int lowPriorityErrors)
-        {
-            try
-            {
-                stopwatch.Stop();
-                string localIP = GetLocalIPAddress();
-                AppendLog($"\nMSP Hub invoice Validation completed at: {DateTime.Now}");
-                AppendLog($"\nTotal Errors: {totalErrors}");
-                AppendLog($"\nHigh Priority Errors: {highPriorityErrors}");
-                AppendLog($"\nLow Priority Errors: {lowPriorityErrors}");
-                AppendLog($"\nLocal IP Address: {localIP}");
-                AppendLog($"\nTotal time taken: {FormatElapsedTime(stopwatch.Elapsed)}");
-                AppendLog($"\nAction: {btnCompare.Text} click\n\n");
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Error logging validation summary: {ex.Message}");
-            }
-        }
-        private string FormatElapsedTime(TimeSpan elapsed)
-        {
-            try
-            {
-                return elapsed.TotalSeconds < 1 ? $"{elapsed.TotalMilliseconds:F2} ms" : elapsed.ToString(@"hh\:mm\:ss");
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Error formatting elapsed time: {ex.Message}");
-                return "N/A";
-            }
-        }
-
-        #endregion Validate_Logic
 
         #region Helpers
 
@@ -1437,7 +1262,7 @@ namespace Reconciliation
                         var startTime = DateTime.Now; // Capture start time
 
                         // Validate records
-                        var invalidRecordsTable = ValidateInvalidRecords(_sixDotOneDataView.Table);
+                        var invalidRecordsTable = new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
                         return invalidRecordsTable.DefaultView; // Convert DataTable to DataView
                     });
 
