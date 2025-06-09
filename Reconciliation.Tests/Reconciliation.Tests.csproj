@@ -34,6 +34,7 @@
     <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
     <Compile Include="../Reconciliation/ReconciliationService.cs" Link="ReconciliationService.cs" />
     <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />
+    <Compile Include="../Reconciliation/InvoiceValidationService.cs" Link="InvoiceValidationService.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
