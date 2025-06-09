@@ -32,6 +32,7 @@
     <Compile Include="../Reconciliation/DataQualityValidator.cs" Link="DataQualityValidator.cs" />
     <Compile Include="../Reconciliation/DataTableExtensions.cs" Link="DataTableExtensions.cs" />
     <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
+    <Compile Include="../Reconciliation/ReconciliationService.cs" Link="ReconciliationService.cs" />
     <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

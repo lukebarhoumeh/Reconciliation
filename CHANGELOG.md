@@ -10,3 +10,4 @@
 - Error log deduplication with configurable summary rows.
 - Raw value logging now captures only the offending cell content.
 - Context values always include customer and SKU or `(missing)` placeholders.
+- Extracted comparison logic into `ReconciliationService` with dedicated tests.
