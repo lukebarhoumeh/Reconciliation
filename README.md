@@ -1,19 +1,6 @@
 # Reconciliation
 MSP HUB RECONCILATION TOOL
 
-## Build
-Requires .NET 8 SDK. Restore and build the solution:
-
-```bash
-dotnet build "Reconciliation Tool.sln"
-```
-
-Run the tests:
-
-```bash
-dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj
-```
-
 ## Usage
 Start the application and select two invoice CSV files. Sample files live under `samples/`.
 
