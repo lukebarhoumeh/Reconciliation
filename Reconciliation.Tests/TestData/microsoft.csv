@@ -1,0 +1,3 @@
+CustomerName,CustomerDomainName,ProductId,SkuId,ChargeType,TermAndBillingCycle,BillingFrequency,SubscriptionDescription
+CustomerA,customerA.com,prod1,sku1,Usage,One-Year commitment for monthly/yearly billing,Monthly,Azure plan
+CustomerB,customerB.com,prod2,sku2,Usage,One-Year commitment for monthly/yearly billing,Monthly,Service

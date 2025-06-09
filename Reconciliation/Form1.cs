@@ -210,40 +210,9 @@ namespace Reconciliation
                 {
                     ClearFileInfo(lblMicrosoftFileName, lblMicrosoftFileRowCount);
                     var fileInfo = new FileInfo(fileDialog.FileName);
-
-                    // Load CSV data
-                    _microsoftDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
-                    if (_microsoftDataView.Table.Rows.Count == 0)
-                    {
-                        ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
-                        throw new ArgumentException("The selected file contains no rows.");
-                    }
-                    DataQualityValidator.Run(_microsoftDataView.Table, fileInfo.Name);
-
-                    // Validate file structure
-                    SchemaValidator.RequireColumns(_microsoftDataView.Table, "Microsoft invoice", _requiredMicrosoftColumns, AllowFuzzyColumns);
-
-                    // Filter out Azure plan rows
-                    for (int i = _microsoftDataView.Count - 1; i >= 0; i--)
-                    {
-                        var row = _microsoftDataView[i].Row;
-                        if (SafeGetString(row, "SubscriptionDescription") == "Azure plan")
-                        {
-                            _microsoftDataView.Delete(i);
-                        }
-                    }
-
-
-                    // Split TermAndBillingCycle into Term and BillingCycle columns
-                    if (!_microsoftDataView.Table.Columns.Contains("Term") || !_microsoftDataView.Table.Columns.Contains("BillingCycle"))
-                    {
-                        SplitColumn(_microsoftDataView.Table, "TermAndBillingCycle", "Term", "BillingCycle");
-                    }
-
-                    // Reorder columns for consistency
-                    _microsoftDataView = ReorderColumns(_microsoftDataView.Table, _uniqueKeyColumns
-                        .Concat(new[] { "TermAndBillingCycle", "BillingFrequency" })
-                        .ToArray());
+                    // TODO: Import logic moved to FileImportService
+                    var service = new FileImportService(AllowFuzzyColumns);
+                    _microsoftDataView = service.ImportMicrosoftInvoice(fileInfo.FullName);
 
                     // Show file name and row count
                     lblMicrosoftFileRowCount.Text = _microsoftDataView.Table.Rows.Count.ToString();
@@ -286,67 +255,9 @@ namespace Reconciliation
                     ClearFileInfo(lblSixDotOneFileName, lblSixDotOneFileRowCount);
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     var size = FormatSize(fileInfo.Length);
-                    _sixDotOneDataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
-                    if (_sixDotOneDataView.Table.Rows.Count == 0)
-                    {
-                        ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
-                        throw new ArgumentException("The selected file contains no rows.");
-                    }
-                    DataQualityValidator.Run(_sixDotOneDataView.Table, fileInfo.Name);
-                    SchemaValidator.RequireColumns(_sixDotOneDataView.Table, "MSP Hub invoice", _requiredMspHubColumns, AllowFuzzyColumns);
-                    if (_sixDotOneDataView != null && _sixDotOneDataView.Table.Columns.Contains("SkuId"))
-                    {
-                        foreach (DataRowView rowView in _sixDotOneDataView)
-                        {
-                            string skuId = SafeGetString(rowView.Row, "SkuId");
-                            string updatedSkuId = skuId.TrimStart('0');
-                            rowView["SkuId"] = updatedSkuId;
-                        }
-                    }
-                    // Check if the second column name is found
-                    if (_sixDotOneDataView.Table.Columns.Contains("BillingFrequency"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["BillingFrequency"].ColumnName = "BillingCycle";
-
-                    }
-                    // Check if the second column name is found
-                    if (_sixDotOneDataView.Table.Columns.Contains("ResourceName"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["ResourceName"].ColumnName = "ProductName";
-
-                    }
-                    // Remove rows where 'ProductName' is "Azure plan"
-                    for (int i = _sixDotOneDataView.Count - 1; i >= 0; i--)
-                    {
-                        var row = _sixDotOneDataView[i].Row;
-                        if (SafeGetString(row, "ProductName") == "Azure plan")
-                        {
-                            _sixDotOneDataView.Delete(i);
-                        }
-                    }
-
-                    if (_sixDotOneDataView.Table.Columns.Contains("ValidFrom"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["ValidFrom"].ColumnName = "ChargeStartDate";
-                    }
-                    if (_sixDotOneDataView.Table.Columns.Contains("ValidTo"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["ValidTo"].ColumnName = "ChargeEndDate";
-                    }
-                    if (_sixDotOneDataView.Table.Columns.Contains("PurchaseDate"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["PurchaseDate"].ColumnName = "OrderDate";
-                    }
-                    if (_sixDotOneDataView.Table.Columns.Contains("PartnerTotal"))
-                    {
-                        // Rename the column to "test"
-                        _sixDotOneDataView.Table.Columns["PartnerTotal"].ColumnName = "Total";
-                    }
+                    // TODO: Import logic moved to FileImportService
+                    var service = new FileImportService(AllowFuzzyColumns);
+                    _sixDotOneDataView = service.ImportSixDotOneInvoice(fileInfo.FullName);
                     _sixDotOneDataView = ReorderColumns(_sixDotOneDataView.Table, _uniqueKeyColumns);
                     lblSixDotOneFileRowCount.Text = _sixDotOneDataView.Table.Rows.Count.ToString();
                     DisplayFileInfo(lblSixDotOneFileName, fileInfo);

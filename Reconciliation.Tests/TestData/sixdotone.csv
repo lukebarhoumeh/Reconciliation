@@ -1,0 +1,3 @@
+SkuId,BillingCycle,ResourceName,ValidFrom,ValidTo,PurchaseDate,PartnerTotal,InternalReferenceId,CustomerName,CustomerDomainName,ProductId,ChargeType
+001,Monthly,Azure plan,2024-01-01,2024-01-31,2024-01-01,100,REF1,Client,client.com,prod1,Usage
+002,Monthly,Regular Product,2024-02-01,2024-02-28,2024-02-01,200,REF2,Client,client.com,prod2,Usage
