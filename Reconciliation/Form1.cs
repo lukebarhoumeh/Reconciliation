@@ -471,7 +471,9 @@ namespace Reconciliation
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = saveFileDialog.FileName;
-                    ExportDataTableToExcel(_pricematchDataView.Table, filePath);
+                    // TODO: use PriceMismatchService to export file
+                    var svc = new PriceMismatchService();
+                    svc.ExportPriceMismatchesToExcel(_pricematchDataView.Table, filePath);
                     MessageBox.Show("The Excel file has been successfully exported.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -1230,12 +1232,12 @@ namespace Reconciliation
                     }));
                     DataTable matchedDataTable = await Task.Run(() =>
                     {
-                        var mismatchPriceFromSixDotOne = FindPriceMismatchedRows(
+                        // TODO: use PriceMismatchService for price comparison
+                        var svc = new PriceMismatchService();
+                        return svc.GetPriceMismatches(
                             _sixDotOneDataView.Table,
-                            _microsoftDataView.Table,
-                            _uniqueKeyColumns
+                            _microsoftDataView.Table
                         );
-                        return mismatchPriceFromSixDotOne;
                     });
                     Invoke(new Action(() =>
                     {
@@ -1509,113 +1511,6 @@ namespace Reconciliation
             return mismatchedRowsTable;
         }
 
-        private DataTable FindPriceMismatchedRows(DataTable sixdotOneDataTable, DataTable microsoftDataTable, string[] _uniqueKeyColumns)
-        {
-            DateTime startTime = DateTime.Now;
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            string localIP = Dns.GetHostAddresses(Dns.GetHostName())[0].ToString();
-
-            AppendLog($"******************** Price mismatch validation of Microsoft and MSP Hub Invoice Run ********************");
-            AppendLog($"\nPrice mismatch validation of Microsoft and MSP Hub Invoice started at: {startTime}");
-            AppendLog($"\nLocal IP: {localIP}");
-
-            // Filter out rows containing "Azure plan" in the specified columns
-            var filteredSixdotOneDataTable = sixdotOneDataTable.AsEnumerable()
-                .Where(row => row["ProductName"].ToString() != "Azure plan")
-                .CopyToDataTable();
-
-            var filteredMicrosoftDataTable = microsoftDataTable.AsEnumerable()
-                .Where(row => row["SubscriptionDescription"].ToString() != "Azure plan")
-                .CopyToDataTable();
-
-            // Create result table with necessary columns, copying structure from the first table
-            DataTable resultTable = sixdotOneDataTable.Clone();
-            resultTable.Columns.Add("PriceInSixDotOne", typeof(decimal));
-            resultTable.Columns.Add("PriceInMicrosoft", typeof(decimal));
-            resultTable.Columns.Add("PriceDifference", typeof(decimal));
-
-            // Group by unique key columns using _uniqueKeyColumns
-            var groupedSixdotOneData = filteredSixdotOneDataTable.AsEnumerable()
-                .GroupBy(row => string.Join("|", _uniqueKeyColumns.Select(col => row[col].ToString())));
-
-            var groupedMicrosoftData = filteredMicrosoftDataTable.AsEnumerable()
-                .GroupBy(row => string.Join("|", _uniqueKeyColumns.Select(col => row[col].ToString())));
-
-            // Iterate over the groups and calculate the aggregated values
-            foreach (var sixdotOneGroup in groupedSixdotOneData)
-            {
-                var microsoftGroup = groupedMicrosoftData
-                    .FirstOrDefault(g => g.Key == sixdotOneGroup.Key);
-
-                if (microsoftGroup != null)
-                {
-                    DataRow resultRow = resultTable.NewRow();
-
-                    // Set unique key columns in result row
-                    var keys = sixdotOneGroup.Key.Split('|');
-                    for (int i = 0; i < _uniqueKeyColumns.Length; i++)
-                    {
-                        resultRow[_uniqueKeyColumns[i]] = keys[i];
-                    }
-
-                    // Set other non-key columns in the result row from the first row of sixdotOneGroup
-                    foreach (DataColumn column in filteredSixdotOneDataTable.Columns)
-                    {
-                        if (!_uniqueKeyColumns.Contains(column.ColumnName) && column.ColumnName != "Quantity")
-                        {
-                            resultRow[column.ColumnName] = sixdotOneGroup.First()[column];
-                        }
-                    }
-
-                    // Sum the Quantity from both groups and set in result row
-                    decimal totalQuantitySixdotOne = sixdotOneGroup.Sum(row => SafeConvertToDecimal(row["Quantity"]));
-                    resultRow["Quantity"] = totalQuantitySixdotOne;
-
-                    // Calculate total prices for SixDotOne and Microsoft
-                    decimal priceInSixDotOne = sixdotOneGroup.Sum(row => SafeConvertToDecimal(row["EffectiveUnitPrice"]) * SafeConvertToDecimal(row["Quantity"]));
-                    decimal priceInMicrosoft = microsoftGroup.Sum(row => SafeConvertToDecimal(row["EffectiveUnitPrice"]) * SafeConvertToDecimal(row["Quantity"]));
-
-                    // Calculate PriceDifference
-                    decimal priceDifference = priceInSixDotOne - priceInMicrosoft;
-
-                    // Set the calculated values in the result row
-                    resultRow["PriceInSixDotOne"] = priceInSixDotOne;
-                    resultRow["PriceInMicrosoft"] = priceInMicrosoft;
-                    resultRow["PriceDifference"] = priceDifference;
-
-                    // Add row to resultTable only if PriceDifference is not 0
-                    if (priceDifference != 0)
-                    {
-                        resultTable.Rows.Add(resultRow);
-                    }
-                }
-            }
-
-            // Count total processed rows
-            int totalProcessedRows = filteredSixdotOneDataTable.Rows.Count + filteredMicrosoftDataTable.Rows.Count;
-
-            // Count total rows with price mismatch
-            int totalMismatchedRows = resultTable.Rows.Count;
-
-            // Log the counts
-            AppendLog($"\nTotal rows Processed: {totalProcessedRows}");
-            AppendLog($"\nTotal rows with price mismatch: {totalMismatchedRows}");
-
-            // Stop stopwatch and log end time
-            stopwatch.Stop();
-            DateTime endTime = DateTime.Now;
-            AppendLog($"\nPrice mismatch validation of Microsoft and MSP Hub Invoice ended at: {endTime}");
-
-            // Format elapsed time
-            TimeSpan elapsed = stopwatch.Elapsed;
-            string formattedElapsed = elapsed.TotalSeconds < 1
-                ? $"{elapsed.TotalMilliseconds:F2} ms"
-                : elapsed.ToString(@"hh\:mm\:ss");
-            AppendLog($"\nTotal time taken: {formattedElapsed}");
-            AppendLog($"\nReconcile is clicked\n\n");
-
-            return resultTable;
-        }
         private DataView CombineMismatchedResults(DataTable resultFromMicrosoftTable, DataTable resultFromSixDotOneTable)
         {
             string columnName = "Not in this file";

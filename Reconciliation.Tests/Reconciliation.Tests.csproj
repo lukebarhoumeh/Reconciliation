@@ -16,6 +16,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="EPPlus" Version="7.6.1" />
     <PackageReference Include="coverlet.collector" Version="6.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -35,6 +36,7 @@
     <Compile Include="../Reconciliation/ReconciliationService.cs" Link="ReconciliationService.cs" />
     <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />
     <Compile Include="../Reconciliation/InvoiceValidationService.cs" Link="InvoiceValidationService.cs" />
+    <Compile Include="../Reconciliation/PriceMismatchService.cs" Link="PriceMismatchService.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
