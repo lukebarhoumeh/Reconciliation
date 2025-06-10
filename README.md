@@ -34,6 +34,9 @@ the detector instance.
 can be unit tested without the WinForms UI. Use
 `CompareInvoices(msphub, microsoft)` to get a table of discrepancies.
 
+`PriceMismatchService` detects unit price differences between the two invoices
+and can export the mismatches to Excel.
+
 Example summary output:
 
 ```
@@ -56,3 +59,5 @@ each discrepancy.
 
 ## Advanced usage
 Use the **Export** menu to save error logs or comparison results. Add additional fuzzy column variants by editing `DataTableExtensions.ColumnVariants`.
+
+
