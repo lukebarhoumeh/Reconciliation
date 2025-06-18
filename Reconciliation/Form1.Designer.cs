@@ -120,13 +120,13 @@
             btnMaximized.Dock = DockStyle.Right;
             btnMaximized.FlatAppearance.BorderSize = 0;
             btnMaximized.FlatStyle = FlatStyle.Flat;
-            btnMaximized.Font = new Font("Segoe UI", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnMaximized.Font = new Font("Segoe MDL2 Assets", 11F);
             btnMaximized.ForeColor = Color.White;
             btnMaximized.Location = new Point(2717, 0);
             btnMaximized.Name = "btnMaximized";
             btnMaximized.Size = new Size(30, 41);
             btnMaximized.TabIndex = 3;
-            btnMaximized.Text = "";
+            btnMaximized.Text = "\uE921";
             btnMaximized.TextAlign = ContentAlignment.TopCenter;
             btnMaximized.UseVisualStyleBackColor = false;
             btnMaximized.Click += btnMaximized_Click;
@@ -137,13 +137,13 @@
             btnClose.Dock = DockStyle.Right;
             btnClose.FlatAppearance.BorderSize = 0;
             btnClose.FlatStyle = FlatStyle.Flat;
-            btnClose.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnClose.Font = new Font("Segoe MDL2 Assets", 11F);
             btnClose.ForeColor = Color.White;
             btnClose.Location = new Point(2747, 0);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(42, 41);
             btnClose.TabIndex = 2;
-            btnClose.Text = "";
+            btnClose.Text = "\uE8BB";
             btnClose.UseVisualStyleBackColor = false;
             btnClose.Click += btnClose_Click;
             // 
@@ -279,10 +279,10 @@
             btnReset.Location = new Point(2496, 440);
             btnReset.Name = "btnReset";
             btnReset.Padding = new Padding(12, 5, 12, 5);
-            btnReset.Size = new Size(143, 40);
+            btnReset.Size = new Size(173, 40);
             btnReset.TabIndex = 38;
             btnReset.ForeColor = Color.White;
-            btnReset.Text = "";
+            btnReset.Text = "Reset";
             btnReset.UseVisualStyleBackColor = false;
             btnReset.Click += btnClear_Click;
             // 
@@ -344,10 +344,10 @@
             btnCompare.Location = new Point(2366, 440);
             btnCompare.Name = "btnCompare";
             btnCompare.Padding = new Padding(12, 5, 12, 5);
-            btnCompare.Size = new Size(124, 40);
+            btnCompare.Size = new Size(154, 40);
             btnCompare.TabIndex = 33;
             btnCompare.ForeColor = Color.White;
-            btnCompare.Text = "";
+            btnCompare.Text = "Reconcile";
             btnCompare.UseVisualStyleBackColor = false;
             btnCompare.Click += btnCompare_Click;
             // 
@@ -365,10 +365,10 @@
             btnExportToCsv.Location = new Point(2645, 440);
             btnExportToCsv.Name = "btnExportToCsv";
             btnExportToCsv.Padding = new Padding(12, 5, 12, 5);
-            btnExportToCsv.Size = new Size(124, 40);
+            btnExportToCsv.Size = new Size(154, 40);
             btnExportToCsv.TabIndex = 32;
             btnExportToCsv.ForeColor = Color.White;
-            btnExportToCsv.Text = "";
+            btnExportToCsv.Text = "Export";
             btnExportToCsv.TextAlign = ContentAlignment.MiddleRight;
             btnExportToCsv.UseVisualStyleBackColor = false;
             btnExportToCsv.Click += btnExportToCsv_Click;
@@ -483,10 +483,10 @@
             btnImportSixDotOneFile.Location = new Point(2529, 89);
             btnImportSixDotOneFile.Name = "btnImportSixDotOneFile";
             btnImportSixDotOneFile.Padding = new Padding(0, 8, 0, 8);
-            btnImportSixDotOneFile.Size = new Size(240, 52);
+            btnImportSixDotOneFile.Size = new Size(270, 52);
             btnImportSixDotOneFile.TabIndex = 23;
             btnImportSixDotOneFile.ForeColor = Color.White;
-            btnImportSixDotOneFile.Text = "";
+            btnImportSixDotOneFile.Text = "Upload MSP Hub Invoice";
             btnImportSixDotOneFile.UseVisualStyleBackColor = false;
             btnImportSixDotOneFile.Click += btnImportSixDotOneFile_Click;
             // 
@@ -553,10 +553,10 @@
             btnImportMicrosoft.Location = new Point(2529, 152);
             btnImportMicrosoft.Name = "btnImportMicrosoft";
             btnImportMicrosoft.Padding = new Padding(0, 8, 0, 8);
-            btnImportMicrosoft.Size = new Size(240, 52);
+            btnImportMicrosoft.Size = new Size(270, 52);
             btnImportMicrosoft.TabIndex = 1;
             btnImportMicrosoft.ForeColor = Color.White;
-            btnImportMicrosoft.Text = "";
+            btnImportMicrosoft.Text = "Upload Microsoft Invoice";
             btnImportMicrosoft.UseVisualStyleBackColor = false;
             btnImportMicrosoft.Click += btnImportMicrosoft_Click;
             // 
