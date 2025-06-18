@@ -33,6 +33,8 @@
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            splitMain = new SplitContainer();
+            btnToggleFiles = new Button();
             panel1 = new Panel();
             btnMaximized = new Button();
             btnClose = new Button();
@@ -89,6 +91,9 @@
             panel2.SuspendLayout();
             tbcMenu.SuspendLayout();
             tabPage1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitMain).BeginInit();
+            splitMain.Panel1.SuspendLayout();
+            splitMain.Panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgResultdata).BeginInit();
             ((System.ComponentModel.ISupportInitialize)LogoMsbhub).BeginInit();
             ((System.ComponentModel.ISupportInitialize)logoMicrosoft).BeginInit();
@@ -212,39 +217,63 @@
             // tabPage1
             // 
             tabPage1.BackColor = Color.White;
-            tabPage1.Controls.Add(lblInternal2DiscrepancyMsg);
-            tabPage1.Controls.Add(lblExternal2DiscrepancyMsg);
-            tabPage1.Controls.Add(btnReset);
-            tabPage1.Controls.Add(lblInternal1DiscrepancyMsg);
-            tabPage1.Controls.Add(label3);
-            tabPage1.Controls.Add(rbInternal);
-            tabPage1.Controls.Add(rbExternal);
-            tabPage1.Controls.Add(btnCompare);
-            tabPage1.Controls.Add(btnExportToCsv);
-            tabPage1.Controls.Add(chkFuzzyColumns);
-            tabPage1.Controls.Add(lblDiscrepancyTitle);
-            tabPage1.Controls.Add(lblExternal1DiscrepancyMsg);
-            tabPage1.Controls.Add(lblEmptyMessage);
-            tabPage1.Controls.Add(dgResultdata);
-            tabPage1.Controls.Add(lblSixDotOneFileRowCount);
-            tabPage1.Controls.Add(lblSixDotOneFileName);
-            tabPage1.Controls.Add(btnImportSixDotOneFile);
-            tabPage1.Controls.Add(LogoMsbhub);
-            tabPage1.Controls.Add(lblMsbhubfilenameLabel);
-            tabPage1.Controls.Add(lblMsbhubrowscountLabel);
-            tabPage1.Controls.Add(lblMicrosoftFileRowCount);
-            tabPage1.Controls.Add(lblMicrosoftFileName);
-            tabPage1.Controls.Add(btnImportMicrosoft);
-            tabPage1.Controls.Add(logoMicrosoft);
-            tabPage1.Controls.Add(lblMicrosoftFilenameLabel);
-            tabPage1.Controls.Add(lblMicrosoftRowsCountLabel);
+            tabPage1.Controls.Add(splitMain);
+            splitMain.Panel1.Controls.Add(lblInternal2DiscrepancyMsg);
+            splitMain.Panel1.Controls.Add(lblExternal2DiscrepancyMsg);
+            splitMain.Panel1.Controls.Add(btnReset);
+            splitMain.Panel1.Controls.Add(lblInternal1DiscrepancyMsg);
+            splitMain.Panel1.Controls.Add(label3);
+            splitMain.Panel1.Controls.Add(rbInternal);
+            splitMain.Panel1.Controls.Add(rbExternal);
+            splitMain.Panel1.Controls.Add(btnCompare);
+            splitMain.Panel1.Controls.Add(btnExportToCsv);
+            splitMain.Panel1.Controls.Add(chkFuzzyColumns);
+            splitMain.Panel1.Controls.Add(lblDiscrepancyTitle);
+            splitMain.Panel1.Controls.Add(lblExternal1DiscrepancyMsg);
+            splitMain.Panel1.Controls.Add(lblEmptyMessage);
+            splitMain.Panel2.Controls.Add(dgResultdata);
+            splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
+            splitMain.Panel1.Controls.Add(lblSixDotOneFileName);
+            splitMain.Panel1.Controls.Add(btnImportSixDotOneFile);
+            splitMain.Panel1.Controls.Add(LogoMsbhub);
+            splitMain.Panel1.Controls.Add(lblMsbhubfilenameLabel);
+            splitMain.Panel1.Controls.Add(lblMsbhubrowscountLabel);
+            splitMain.Panel1.Controls.Add(lblMicrosoftFileRowCount);
+            splitMain.Panel1.Controls.Add(lblMicrosoftFileName);
+            splitMain.Panel1.Controls.Add(btnImportMicrosoft);
+            splitMain.Panel1.Controls.Add(logoMicrosoft);
+            splitMain.Panel1.Controls.Add(lblMicrosoftFilenameLabel);
+            splitMain.Panel1.Controls.Add(lblMicrosoftRowsCountLabel);
+            splitMain.Panel1.Controls.Add(btnToggleFiles);
             tabPage1.Location = new Point(4, 59);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
             tabPage1.Size = new Size(2781, 1323);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "Invoice Validation";
-            // 
+            //
+            // splitMain
+            //
+            splitMain.Dock = DockStyle.Fill;
+            splitMain.Orientation = Orientation.Horizontal;
+            splitMain.Panel1MinSize = 260;
+            splitMain.Location = new Point(3, 3);
+            splitMain.Name = "splitMain";
+            splitMain.Size = new Size(2775, 1317);
+            splitMain.TabIndex = 0;
+            //
+            // btnToggleFiles
+            //
+            btnToggleFiles.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnToggleFiles.Font = new Font("Segoe MDL2 Assets", 9F);
+            btnToggleFiles.Location = new Point(2736, 3);
+            btnToggleFiles.Name = "btnToggleFiles";
+            btnToggleFiles.Size = new Size(28, 24);
+            btnToggleFiles.TabIndex = 51;
+            btnToggleFiles.Text = "\uE014";
+            btnToggleFiles.UseVisualStyleBackColor = true;
+            btnToggleFiles.Click += btnToggleFiles_Click;
+            //
             // lblInternal2DiscrepancyMsg
             // 
             lblInternal2DiscrepancyMsg.AutoSize = true;
@@ -440,9 +469,9 @@
             dataGridViewCellStyle2.SelectionForeColor = Color.White;
             dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
             dgResultdata.DefaultCellStyle = dataGridViewCellStyle2;
-            dgResultdata.Dock = DockStyle.Bottom;
+            dgResultdata.Dock = DockStyle.Fill;
             dgResultdata.EnableHeadersVisualStyles = false;
-            dgResultdata.Location = new Point(3, 713);
+            dgResultdata.Location = new Point(0, 0);
             dgResultdata.Name = "dgResultdata";
             dgResultdata.ReadOnly = true;
             dgResultdata.RowHeadersWidth = 51;
@@ -492,11 +521,12 @@
             // 
             // LogoMsbhub
             // 
-            LogoMsbhub.Image = (Image)resources.GetObject("LogoMsbhub.Image");
+            LogoMsbhub.Image = global::Reconciliation.Properties.Resources.MSPHub_150;
             LogoMsbhub.Location = new Point(7, 95);
             LogoMsbhub.Name = "LogoMsbhub";
-            LogoMsbhub.Size = new Size(180, 37);
-            LogoMsbhub.SizeMode = PictureBoxSizeMode.AutoSize;
+            LogoMsbhub.Size = new Size(150, 48);
+            LogoMsbhub.SizeMode = PictureBoxSizeMode.Zoom;
+            LogoMsbhub.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             LogoMsbhub.TabIndex = 22;
             LogoMsbhub.TabStop = false;
             // 
@@ -562,11 +592,12 @@
             // 
             // logoMicrosoft
             // 
-            logoMicrosoft.Image = (Image)resources.GetObject("logoMicrosoft.Image");
+            logoMicrosoft.Image = global::Reconciliation.Properties.Resources.Microsoft_150;
             logoMicrosoft.Location = new Point(10, 153);
             logoMicrosoft.Name = "logoMicrosoft";
-            logoMicrosoft.Size = new Size(188, 40);
-            logoMicrosoft.SizeMode = PictureBoxSizeMode.AutoSize;
+            logoMicrosoft.Size = new Size(150, 48);
+            logoMicrosoft.SizeMode = PictureBoxSizeMode.Zoom;
+            logoMicrosoft.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             logoMicrosoft.TabIndex = 0;
             logoMicrosoft.TabStop = false;
             // 
@@ -835,6 +866,10 @@
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
             tbcMenu.ResumeLayout(false);
+            splitMain.Panel2.ResumeLayout(false);
+            splitMain.Panel1.ResumeLayout(false);
+            splitMain.Panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)splitMain).EndInit();
             tabPage1.ResumeLayout(false);
             tabPage1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgResultdata).EndInit();
@@ -904,6 +939,8 @@
         private Button btnPriceMismatchingExportToCsv;
         private Label label5;
         private PictureBox pictureBox2;
+        private SplitContainer splitMain;
+        private Button btnToggleFiles;
 
         private void Form1_Load(object sender, EventArgs e)
         {

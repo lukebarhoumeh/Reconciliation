@@ -59,6 +59,7 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnExportToCsv, "Export reconciliation results to CSV");
             _toolTip.SetToolTip(btnExportLogs, "Export Logs");
             _toolTip.SetToolTip(btnResetLogs, "Reset Logs");
+            _toolTip.SetToolTip(btnToggleFiles, "Hide/Show details");
             _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
@@ -250,6 +251,15 @@ namespace Reconciliation
 
             this.WindowState = FormWindowState.Minimized;
         }
+
+        /// <summary>
+        /// Toggle visibility of the results panel.
+        /// </summary>
+        private void btnToggleFiles_Click(object sender, EventArgs e)
+        {
+            splitMain.Panel2Collapsed = !splitMain.Panel2Collapsed;
+            btnToggleFiles.Text = splitMain.Panel2Collapsed ? "\uE010" : "\uE014";
+        }
         private void btnImportSixDotOneFile_Click(object sender, EventArgs e)
         {
             try
@@ -318,6 +328,7 @@ namespace Reconciliation
                         // **Prevent Sorting**
                         BindingSource bindingSource = new BindingSource { DataSource = mismatchData };
                         dgResultdata.DataSource = bindingSource;
+                        AutoFitColumns(dgResultdata);
 
                         foreach (DataGridViewColumn column in dgResultdata.Columns)
                         {
@@ -361,6 +372,7 @@ namespace Reconciliation
                         }
 
                         dgResultdata.DataSource = invalidData.DefaultView;
+                        AutoFitColumns(dgResultdata);
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
 
@@ -635,6 +647,17 @@ namespace Reconciliation
                     billingCycle = "OneTime";
                     break;
             }
+        }
+
+        /// <summary>
+        /// Auto fit DataGridView columns based on displayed cells.
+        /// </summary>
+        /// <param name="grid">Target grid.</param>
+        private static void AutoFitColumns(DataGridView grid)
+        {
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            grid.AutoResizeColumns();
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
         }
 
         #endregion Button_Clicks
