@@ -117,7 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="MSPHub_150" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+  <data name="MSPHub150" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAAJYAAAAwCAIAAAB8JhRGAAACrUlEQVR4nO3asWvi
         UBzA8ZfzwL4WiUPRLf+BaRGRDklqoKmCtJtvcit0chKcHNy6dOtYaLZObdeCg5N2
@@ -137,7 +137,7 @@
         +wEQnjnvOcRMOwAAAABJRU5ErkJggg==
     </value>
   </data>
-  <data name="Microsoft_150" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+  <data name="Microsoft150" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAAJYAAAAwCAIAAAB8JhRGAAAC3UlEQVR4nO3Yv0s6
         cRjA8cfzhg6hM6FFh/6DqBuEfukFeRwXQjU0mBVt/QtHS1s/psjBJSIMarmGFhFH

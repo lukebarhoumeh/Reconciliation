@@ -522,7 +522,7 @@ using Reconciliation.Properties;
             // 
             // LogoMsbhub
             // 
-            LogoMsbhub.Image = global::Reconciliation.Properties.Resources.MSPHub_150;
+            LogoMsbhub.Image = global::Reconciliation.Properties.Resources.MSPHub150;
             LogoMsbhub.Location = new Point(7, 95);
             LogoMsbhub.Name = "LogoMsbhub";
             LogoMsbhub.Size = new Size(150, 48);
@@ -593,7 +593,7 @@ using Reconciliation.Properties;
             // 
             // logoMicrosoft
             // 
-            logoMicrosoft.Image = global::Reconciliation.Properties.Resources.Microsoft_150;
+            logoMicrosoft.Image = global::Reconciliation.Properties.Resources.Microsoft150;
             logoMicrosoft.Location = new Point(10, 153);
             logoMicrosoft.Name = "logoMicrosoft";
             logoMicrosoft.Size = new Size(150, 48);
