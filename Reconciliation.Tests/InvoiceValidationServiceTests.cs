@@ -101,5 +101,23 @@ namespace Reconciliation.Tests
             var result = new InvoiceValidationService().ValidateInvoice(dt);
             Assert.Empty(result.Rows);
         }
+
+        [Fact]
+        public void DiscountHierarchyCheck_Skipped_WhenCustomerDiscount100()
+        {
+            var dt = CreateTable();
+            dt.Rows.Add("2024-01-01","2024-01-30","4","30","10","100","10","0");
+            var result = new InvoiceValidationService().ValidateInvoice(dt);
+            Assert.Empty(result.Rows);
+        }
+
+        [Fact]
+        public void PriceConsistencyCheck_Skipped_WhenCustomerDiscount100()
+        {
+            var dt = CreateTable();
+            dt.Rows.Add("2024-01-01","2024-01-30","4","30","10","100","5","0");
+            var result = new InvoiceValidationService().ValidateInvoice(dt);
+            Assert.Empty(result.Rows);
+        }
     }
 }

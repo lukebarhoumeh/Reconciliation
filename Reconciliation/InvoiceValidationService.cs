@@ -105,14 +105,27 @@ namespace Reconciliation
                 }
             }
 
-            if (partnerDiscountPercentage < customerDiscountPercentage)
+            int rowNumber = table.Rows.IndexOf(row) + 1;
+            if (customerDiscountPercentage >= 100)
+            {
+                ErrorLogger.LogWarning(rowNumber, nameof(customerDiscountPercentage),
+                    "Customer at 100% discount – hierarchy check skipped.",
+                    customerDiscountPercentage.ToString(), "MSPHubInvoice", string.Empty);
+            }
+            else if (partnerDiscountPercentage < customerDiscountPercentage)
             {
                 row["Discount Hierarchy Check"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage}%) is less than CustomerDiscountPercentage ({customerDiscountPercentage}%).";
                 isInvalid = true;
                 lowPriorityErrors++;
             }
 
-            if (Math.Abs(partnerTotal) > Math.Abs(customerSubtotal))
+            if (customerSubtotal == 0 && customerDiscountPercentage >= 100)
+            {
+                ErrorLogger.LogWarning(rowNumber, nameof(customerSubtotal),
+                    "Customer billed $0 due to 100% discount – consistency check skipped.",
+                    customerSubtotal.ToString(), "MSPHubInvoice", string.Empty);
+            }
+            else if (Math.Abs(partnerTotal) > Math.Abs(customerSubtotal))
             {
                 row["Pricing Consistency Check"] = $"Invalid: PartnerTotal ({partnerTotal}) is greater than CustomerSubTotal ({customerSubtotal}).";
                 isInvalid = true;
