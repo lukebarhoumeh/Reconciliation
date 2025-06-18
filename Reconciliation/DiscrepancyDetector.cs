@@ -100,7 +100,10 @@ namespace Reconciliation
             if (decimal.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal da) &&
                 decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal db))
             {
-                return $"Numeric mismatch in {column}: {da} vs {db}";
+                bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase);
+                string left = percent ? FormatHelper.FormatPercent(da) : FormatHelper.FormatMoney(da);
+                string right = percent ? FormatHelper.FormatPercent(db) : FormatHelper.FormatMoney(db);
+                return $"Numeric mismatch in {column}: {left} vs {right}";
             }
             if (DateTime.TryParse(a, out DateTime ta) && DateTime.TryParse(b, out DateTime tb))
             {
@@ -115,6 +118,17 @@ namespace Reconciliation
                 _summary[explanation]++;
             else
                 _summary[explanation] = 1;
+        }
+
+        private static string FormatValue(string value, string column)
+        {
+            if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+            {
+                bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase) || value.Trim().EndsWith("%");
+                string formatted = percent ? FormatHelper.FormatPercent(d) : FormatHelper.FormatMoney(d);
+                return percent && value.Trim().EndsWith("%") ? formatted + "%" : formatted;
+            }
+            return value;
         }
 
         /// <summary>
@@ -134,8 +148,8 @@ namespace Reconciliation
                 var row = table.NewRow();
                 row["Row"] = d.Row;
                 row["Column"] = d.Column;
-                row["LeftValue"] = d.LeftValue;
-                row["RightValue"] = d.RightValue;
+                row["LeftValue"] = FormatValue(d.LeftValue, d.Column);
+                row["RightValue"] = FormatValue(d.RightValue, d.Column);
                 row["Explanation"] = d.Explanation;
                 table.Rows.Add(row);
             }

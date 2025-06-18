@@ -81,6 +81,7 @@
             tabPage2 = new TabPage();
             btnResetLogs = new Button();
             btnExportLogs = new Button();
+            dgvLogs = new DataGridView();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             panel1.SuspendLayout();
@@ -735,6 +736,7 @@
             // 
             tabPage2.Controls.Add(btnResetLogs);
             tabPage2.Controls.Add(btnExportLogs);
+            tabPage2.Controls.Add(dgvLogs);
             tabPage2.Controls.Add(textLogs);
             tabPage2.Location = new Point(4, 59);
             tabPage2.Name = "tabPage2";
@@ -783,9 +785,21 @@
             btnExportLogs.TextAlign = ContentAlignment.MiddleRight;
             btnExportLogs.UseVisualStyleBackColor = false;
             btnExportLogs.Click += btnExportLogs_Click;
-            // 
+            //
+            // dgvLogs
+            //
+            dgvLogs.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            dgvLogs.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgvLogs.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvLogs.Location = new Point(3, 6);
+            dgvLogs.Name = "dgvLogs";
+            dgvLogs.ReadOnly = true;
+            dgvLogs.RowHeadersVisible = false;
+            dgvLogs.Size = new Size(1923, 530);
+            dgvLogs.TabIndex = 35;
+            //
             // textLogs
-            // 
+            //
             textLogs.BackColor = Color.White;
             textLogs.Dock = DockStyle.Bottom;
             textLogs.Location = new Point(3, 544);
@@ -866,6 +880,7 @@
         private Button btnReset;
         private Label lblExternal2DiscrepancyMsg;
         private Label lblInternal2DiscrepancyMsg;
+        private DataGridView dgvLogs;
         private RichTextBox textLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;

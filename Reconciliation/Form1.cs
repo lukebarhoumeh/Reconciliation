@@ -380,6 +380,9 @@ namespace Reconciliation
                         }
                     }));
                 }
+
+                PopulateLogsGrid();
+                tbcMenu.SelectedTab = tabPage2;
             }
             catch (Exception exception)
             {
@@ -1093,6 +1096,35 @@ namespace Reconciliation
             {
                 textLogs.AppendText(message);
             }
+        }
+
+        private void PopulateLogsGrid()
+        {
+            var table = new DataTable();
+            table.Columns.Add("Timestamp");
+            table.Columns.Add("Level");
+            table.Columns.Add("Row");
+            table.Columns.Add("Column");
+            table.Columns.Add("Description");
+            table.Columns.Add("Raw");
+            table.Columns.Add("File");
+            table.Columns.Add("Context");
+
+            foreach (var e in ErrorLogger.Entries)
+            {
+                var r = table.NewRow();
+                r[0] = e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+                r[1] = e.ErrorLevel;
+                r[2] = e.RowNumber > 0 ? e.RowNumber.ToString() : string.Empty;
+                r[3] = e.ColumnName;
+                r[4] = e.Description;
+                r[5] = e.RawValue;
+                r[6] = e.FileName;
+                r[7] = e.Context;
+                table.Rows.Add(r);
+            }
+
+            dgvLogs.DataSource = table;
         }
         // Helper method to safely convert to decimal
         private decimal SafeConvertToDecimal(object value)
