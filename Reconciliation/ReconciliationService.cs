@@ -16,7 +16,10 @@ namespace Reconciliation
 
             var detector = new DiscrepancyDetector();
             detector.Compare(sixDotOne, microsoft);
-            return detector.GetMismatches();
+            var table = detector.GetMismatches();
+            if (!table.Columns.Contains("Reason"))
+                table.Columns.Add("Reason", typeof(string));
+            return table;
         }
     }
 }

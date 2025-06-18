@@ -12,3 +12,4 @@
 - Context values always include customer and SKU or `(missing)` placeholders.
 - Extracted comparison logic into `ReconciliationService` with dedicated tests.
 - Added `PriceMismatchService` for price difference detection and Excel export.
+- Fixed crash when highlighting results with missing "Reason" column by always creating it and skipping highlight when absent.
