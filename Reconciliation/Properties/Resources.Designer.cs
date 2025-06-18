@@ -73,9 +73,29 @@ namespace Reconciliation.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap MSPHub_150 {
+            get {
+                object obj = ResourceManager.GetObject("MSPHub_150", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Microsoft150 {
             get {
                 object obj = ResourceManager.GetObject("Microsoft150", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Microsoft_150 {
+            get {
+                object obj = ResourceManager.GetObject("Microsoft_150", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
