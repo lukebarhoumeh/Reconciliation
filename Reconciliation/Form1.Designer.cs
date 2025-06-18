@@ -1,3 +1,4 @@
+using Reconciliation.Properties;
 ﻿namespace Reconciliation
 {
     partial class Form1
