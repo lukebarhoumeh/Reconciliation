@@ -366,18 +366,18 @@ namespace Reconciliation
 
                         // Attach the event handler for cell formatting
                         dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
-                if (ErrorLogger.HasErrors)
-                {
-                    var errorCount = ErrorLogger.Entries.Count(e => e.ErrorLevel == "Error");
-                    var res = MessageBox.Show($"Parsing errors found: {errorCount}. Export log?", "Parsing Errors", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (res == DialogResult.Yes)
-                    {
-                        using var sfd = new SaveFileDialog { Filter = "CSV File|*.csv", FileName = $"ErrorLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
-                        if (sfd.ShowDialog() == DialogResult.OK)
-                            ErrorLogger.Export(sfd.FileName);
-                    }
-                    ErrorLogger.Clear();
-                }
+                        if (ErrorLogger.HasErrors)
+                        {
+                            var errorCount = ErrorLogger.Entries.Count(e => e.ErrorLevel == "Error");
+                            var res = MessageBox.Show($"Parsing errors found: {errorCount}. Export log?", "Parsing Errors", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                            if (res == DialogResult.Yes)
+                            {
+                                using var sfd = new SaveFileDialog { Filter = "CSV File|*.csv", FileName = $"ErrorLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
+                                if (sfd.ShowDialog() == DialogResult.OK)
+                                    ErrorLogger.Export(sfd.FileName);
+                            }
+                            ErrorLogger.Clear();
+                        }
                     }));
                 }
             }
@@ -1623,5 +1623,6 @@ namespace Reconciliation
             return val == null || val == DBNull.Value ? string.Empty : val.ToString();
         } // <--- This closes the last method in Form1
 
-    } // <--- THIS IS THE ONLY closing brace for Form1
+    }// <--- THIS IS THE ONLY closing brace for Form1
+}
 
