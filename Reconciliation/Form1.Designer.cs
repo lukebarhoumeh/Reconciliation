@@ -276,7 +276,7 @@
             btnReset.FlatStyle = FlatStyle.Flat;
             btnReset.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnReset.ImageAlign = ContentAlignment.MiddleLeft;
-            btnReset.Location = new Point(2496, 440);
+            btnReset.Location = new Point(2528, 440);
             btnReset.Name = "btnReset";
             btnReset.Padding = new Padding(12, 5, 12, 5);
             btnReset.Size = new Size(173, 40);
@@ -362,7 +362,7 @@
             btnExportToCsv.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnExportToCsv.Image = (Image)resources.GetObject("btnExportToCsv.Image");
             btnExportToCsv.ImageAlign = ContentAlignment.MiddleLeft;
-            btnExportToCsv.Location = new Point(2645, 440);
+            btnExportToCsv.Location = new Point(2709, 440);
             btnExportToCsv.Name = "btnExportToCsv";
             btnExportToCsv.Padding = new Padding(12, 5, 12, 5);
             btnExportToCsv.Size = new Size(154, 40);
@@ -765,10 +765,10 @@
             btnResetLogs.Location = new Point(959, -38);
             btnResetLogs.Name = "btnResetLogs";
             btnResetLogs.Padding = new Padding(12, 5, 12, 5);
-            btnResetLogs.Size = new Size(148, 40);
+            btnResetLogs.Size = new Size(90, 40);
             btnResetLogs.TabIndex = 34;
             btnResetLogs.ForeColor = Color.White;
-            btnResetLogs.Text = "";
+            btnResetLogs.Text = "Reset";
             btnResetLogs.UseVisualStyleBackColor = false;
             btnResetLogs.Click += btnResetLogs_Click;
             // 
@@ -786,10 +786,10 @@
             btnExportLogs.Location = new Point(1113, -38);
             btnExportLogs.Name = "btnExportLogs";
             btnExportLogs.Padding = new Padding(12, 5, 12, 5);
-            btnExportLogs.Size = new Size(148, 40);
+            btnExportLogs.Size = new Size(90, 40);
             btnExportLogs.TabIndex = 33;
             btnExportLogs.ForeColor = Color.White;
-            btnExportLogs.Text = "";
+            btnExportLogs.Text = "Export";
             btnExportLogs.TextAlign = ContentAlignment.MiddleRight;
             btnExportLogs.UseVisualStyleBackColor = false;
             btnExportLogs.Click += btnExportLogs_Click;
