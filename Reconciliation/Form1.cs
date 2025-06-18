@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
+using FormsTimer = System.Windows.Forms.Timer;
 
 namespace Reconciliation
 {
@@ -26,7 +27,7 @@ namespace Reconciliation
         private bool isSwitchingMode = false;
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
         private readonly ToolTip _toolTip = new();
-        private readonly Timer _logFlashTimer = new();
+        private readonly FormsTimer _logFlashTimer = new();
 
         #region Form_UX
 
