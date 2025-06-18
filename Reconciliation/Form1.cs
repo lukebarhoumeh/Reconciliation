@@ -12,6 +12,7 @@ using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
 using FormsTimer = System.Windows.Forms.Timer;
+using System.Globalization;
 
 namespace Reconciliation
 {
@@ -27,7 +28,7 @@ namespace Reconciliation
         private bool isSwitchingMode = false;
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
         private readonly ToolTip _toolTip = new();
-        private readonly FormsTimer _logFlashTimer = new();
+        private readonly FormsTimer _flashTimer = new();
 
         #region Form_UX
 
@@ -77,11 +78,11 @@ namespace Reconciliation
                 tbcMenu.TabPages.Remove(tabPage3);
             }
 
-            _logFlashTimer.Interval = 5000;
-            _logFlashTimer.Tick += (s, e) =>
+            _flashTimer.Interval = 5000;
+            _flashTimer.Tick += (s, e) =>
             {
                 tabPage2.ForeColor = SystemColors.ControlText;
-                _logFlashTimer.Stop();
+                _flashTimer.Stop();
             };
         }
         private void EnableDoubleBuffering(Control control)
@@ -287,7 +288,6 @@ namespace Reconciliation
             try
             {
                 dgResultdata.DataSource = null;
-                tbcMenu.SelectedIndex = 2;
                 lblEmptyMessage.Text = "Please wait, processing...";
                 lblEmptyMessage.Visible = true;
                 lblPricematchingEmptyMessage.Text = "Please wait, processing...";
@@ -1126,8 +1126,8 @@ namespace Reconciliation
                 r[1] = e.ErrorLevel;
                 r[2] = e.RowNumber > 0 ? e.RowNumber.ToString() : string.Empty;
                 r[3] = e.ColumnName;
-                r[4] = e.Description;
-                r[5] = e.RawValue;
+                r[4] = FormatNumeric(e.Description, e.ColumnName);
+                r[5] = FormatNumeric(e.RawValue, e.ColumnName);
                 r[6] = e.FileName;
                 r[7] = e.Context;
                 table.Rows.Add(r);
@@ -1139,8 +1139,8 @@ namespace Reconciliation
         private void FlashLogsTab()
         {
             tabPage2.ForeColor = Color.Red;
-            _logFlashTimer.Stop();
-            _logFlashTimer.Start();
+            _flashTimer.Stop();
+            _flashTimer.Start();
         }
         // Helper method to safely convert to decimal
         private decimal SafeConvertToDecimal(object value)
@@ -1148,6 +1148,17 @@ namespace Reconciliation
             if (value == null || value == DBNull.Value)
                 return 0;
             return Convert.ToDecimal(value);
+        }
+
+        private static string FormatNumeric(string value, string columnHint)
+        {
+            if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+            {
+                bool percent = columnHint.Contains("Percent", StringComparison.OrdinalIgnoreCase) || value.Trim().EndsWith("%");
+                string formatted = percent ? NumericFormatter.Percent(d) : NumericFormatter.Money(d);
+                return percent && value.Trim().EndsWith("%") ? formatted + "%" : formatted;
+            }
+            return value;
         }
 
 

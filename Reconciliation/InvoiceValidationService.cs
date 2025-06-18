@@ -89,22 +89,21 @@ namespace Reconciliation
 
             if (msrpPrice > 5)
             {
+                var rounded = Math.Round(partnerDiscountPercentage, 1,
+                    MidpointRounding.AwayFromZero);
                 const decimal minDiscount = 18.0m;
-                const decimal maxDiscount = 20.0m;
+                const decimal maxDiscount = 20.1m; // inclusive upper bound
                 if (partnerDiscountPercentage <= 0)
                 {
-                    row["Partner Discount Validation"] = $"Invalid: MSRP ({msrpPrice}) is greater than 5, but PartnerDiscountPercentage is {partnerDiscountPercentage}%.";
+                    row["Partner Discount Validation"] = $"Invalid: MSRP ({NumericFormatter.Money(msrpPrice)}) is greater than 5, but PartnerDiscountPercentage is {NumericFormatter.Percent(partnerDiscountPercentage)}%.";
                     isInvalid = true;
                     highPriorityErrors++;
                 }
                 else
                 {
-                    decimal partner = Math.Round(partnerDiscountPercentage, 1);
-                    decimal lower = Math.Round(minDiscount, 1);
-                    decimal upper = Math.Round(maxDiscount, 1);
-                    if (partner < lower - 0.01m || partner > upper + 0.01m)
+                    if (rounded < minDiscount || rounded > maxDiscount)
                     {
-                        row["Partner Discount Validation"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage:F2}%) is not between {minDiscount:F2}% and {maxDiscount:F2}%.";
+                        row["Partner Discount Validation"] = $"Invalid: PartnerDiscountPercentage ({NumericFormatter.Percent(partnerDiscountPercentage)}%) is not between {NumericFormatter.Percent(minDiscount)}% and {NumericFormatter.Percent(maxDiscount)}%.";
                         isInvalid = true;
                         highPriorityErrors++;
                     }
@@ -120,7 +119,7 @@ namespace Reconciliation
             }
             else if (partnerDiscountPercentage < customerDiscountPercentage)
             {
-                row["Discount Hierarchy Check"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage}%) is less than CustomerDiscountPercentage ({customerDiscountPercentage}%).";
+                row["Discount Hierarchy Check"] = $"Invalid: PartnerDiscountPercentage ({NumericFormatter.Percent(partnerDiscountPercentage)}%) is less than CustomerDiscountPercentage ({NumericFormatter.Percent(customerDiscountPercentage)}%).";
                 isInvalid = true;
                 lowPriorityErrors++;
             }
@@ -133,7 +132,7 @@ namespace Reconciliation
             }
             else if (Math.Abs(partnerTotal) > Math.Abs(customerSubtotal))
             {
-                row["Pricing Consistency Check"] = $"Invalid: PartnerTotal ({partnerTotal}) is greater than CustomerSubTotal ({customerSubtotal}).";
+                row["Pricing Consistency Check"] = $"Invalid: PartnerTotal ({NumericFormatter.Money(partnerTotal)}) is greater than CustomerSubTotal ({NumericFormatter.Money(customerSubtotal)}).";
                 isInvalid = true;
                 lowPriorityErrors++;
             }

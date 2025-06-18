@@ -34,7 +34,7 @@ namespace Reconciliation.Tests
         }
 
         [Fact]
-        public void ImportSixDotOneInvoice_FuzzySkuNameMapped()
+        public void FuzzyRenameAcceptsSkuName()
         {
             var path = Path.Combine("TestData", "sixdotone_skuname.csv");
             var service = new FileImportService(true);

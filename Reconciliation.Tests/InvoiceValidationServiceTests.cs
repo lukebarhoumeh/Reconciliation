@@ -49,12 +49,22 @@ namespace Reconciliation.Tests
         }
 
         [Fact]
-        public void ValidateInvoice_PartnerDiscount205_Passes()
+        public void PartnerDiscount_RoundedValue_Passes()
         {
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","6","30","20.05","5","10","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
             Assert.Empty(result.Rows);
+        }
+
+        [Fact]
+        public void PartnerDiscount_20point2_Fails()
+        {
+            var dt = CreateTable();
+            dt.Rows.Add("2024-01-01","2024-01-30","6","30","20.2","5","10","10");
+            var result = new InvoiceValidationService().ValidateInvoice(dt);
+            Assert.Single(result.Rows);
+            Assert.Contains("PartnerDiscountPercentage", result.Rows[0]["Partner Discount Validation"].ToString());
         }
 
         [Fact]

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 
 namespace Reconciliation
 {
@@ -127,13 +128,15 @@ namespace Reconciliation
                 foreach (var e in _entries)
                 {
                     var ts = e.IsSummary ? "Summary" : e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+                    string desc = FormatNumeric(e.Description, e.ColumnName);
+                    string raw = FormatNumeric(e.RawValue, e.ColumnName);
                     lines.Add(string.Join(',',
                         ts,
                         e.ErrorLevel,
                         e.RowNumber > 0 ? e.RowNumber.ToString() : "-",
                         Escape(e.ColumnName),
-                        Escape(e.Description),
-                        Escape(e.RawValue),
+                        Escape(desc),
+                        Escape(raw),
                         Escape(e.FileName),
                         Escape(e.Context)));
                 }
@@ -149,6 +152,17 @@ namespace Reconciliation
             if (string.IsNullOrEmpty(value)) return "";
             return value.Contains(',') || value.Contains('"')
                 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
+        }
+
+        private static string FormatNumeric(string value, string columnHint)
+        {
+            if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+            {
+                bool percent = columnHint.Contains("Percent", StringComparison.OrdinalIgnoreCase) || value.Trim().EndsWith("%");
+                string formatted = percent ? NumericFormatter.Percent(d) : NumericFormatter.Money(d);
+                return percent && value.Trim().EndsWith("%") ? formatted + "%" : formatted;
+            }
+            return value;
         }
     }
 }
