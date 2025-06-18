@@ -57,7 +57,8 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnImportSixDotOneFile, "Select the MSP Hub invoice CSV to reconcile");
             _toolTip.SetToolTip(btnCompare, "Run reconciliation using the loaded files");
             _toolTip.SetToolTip(btnExportToCsv, "Export reconciliation results to CSV");
-            _toolTip.SetToolTip(btnExportLogs, "Export parsing and processing logs");
+            _toolTip.SetToolTip(btnExportLogs, "Export Logs");
+            _toolTip.SetToolTip(btnResetLogs, "Reset Logs");
             _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
