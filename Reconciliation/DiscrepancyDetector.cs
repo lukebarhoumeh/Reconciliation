@@ -118,6 +118,32 @@ namespace Reconciliation
         }
 
         /// <summary>
+        /// Convert collected discrepancies into a <see cref="DataTable"/>.
+        /// </summary>
+        public DataTable GetMismatches()
+        {
+            var table = new DataTable();
+            table.Columns.Add("Row", typeof(int));
+            table.Columns.Add("Column", typeof(string));
+            table.Columns.Add("LeftValue", typeof(string));
+            table.Columns.Add("RightValue", typeof(string));
+            table.Columns.Add("Explanation", typeof(string));
+
+            foreach (var d in _discrepancies)
+            {
+                var row = table.NewRow();
+                row["Row"] = d.Row;
+                row["Column"] = d.Column;
+                row["LeftValue"] = d.LeftValue;
+                row["RightValue"] = d.RightValue;
+                row["Explanation"] = d.Explanation;
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+
+        /// <summary>
         /// Generate a human readable summary of the comparison.
         /// </summary>
         public string GetSummary()

@@ -12,15 +12,15 @@ namespace Reconciliation
     /// </summary>
     public class PriceMismatchService
     {
-        private readonly string[] _keyColumns =
-        [
+        private readonly string[] _keyColumns = new[]
+        {
             "CustomerDomainName",
             "ProductId",
             "SkuId",
             "ChargeType",
             "Term",
             "BillingCycle"
-        ];
+        };
 
         /// <summary>
         /// Returns rows where total price differs between MSP Hub and Microsoft invoices.

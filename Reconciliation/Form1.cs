@@ -18,10 +18,10 @@ namespace Reconciliation
     {
         private static readonly string[] suffixes = { "Bytes", "KB", "MB", "GB" };
         private DataView _microsoftDataView, _sixDotOneDataView, _resultData, _pricematchDataView;
-        private string[] _uniqueKeyColumns = ["CustomerDomainName", "ProductId", "SkuId", "ChargeType", "Term", "BillingCycle"];
+        private string[] _uniqueKeyColumns = new[] { "CustomerDomainName", "ProductId", "SkuId", "ChargeType", "Term", "BillingCycle" };
         private string[] _columnsToBeDeleted = { "CustomerCountry", "MpnId", "AvailabilityId", "Currency", "PriceAdjustmentDescription", "PublisherName", "PublisherId", "ProductQualifiers", "ReferenceId", "MeterDescription", "PCToBCExchangeRateDate", "PCToBCExchangeRate", "PricingCurrency", "BillableQuantity", "AlternateId", "UnitType" };
-        private readonly string[] _requiredMicrosoftColumns = ["CustomerDomainName", "ProductId", "SkuId", "ChargeType", "TermAndBillingCycle"];
-        private readonly string[] _requiredMspHubColumns = ["InternalReferenceId", "SkuId", "BillingCycle"];
+        private readonly string[] _requiredMicrosoftColumns = new[] { "CustomerDomainName", "ProductId", "SkuId", "ChargeType", "TermAndBillingCycle" };
+        private readonly string[] _requiredMspHubColumns = new[] { "InternalReferenceId", "SkuId", "BillingCycle" };
         private int hoveredIndex = -1;
         private bool isSwitchingMode = false;
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
@@ -288,7 +288,11 @@ namespace Reconciliation
                 {
                     _resultData = await Task.Run(() =>
                     {
-                        return new ReconciliationService().CompareInvoices(_sixDotOneDataView.Table, _microsoftDataView.Table).DefaultView;
+                        return new ReconciliationService()
+                                   .CompareInvoices(_sixDotOneDataView.Table,
+                                                    _microsoftDataView.Table)
+                                   .DefaultView;
+                    });
 
                     Invoke(new Action(() =>
                     {
