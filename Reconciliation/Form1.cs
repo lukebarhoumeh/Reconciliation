@@ -26,6 +26,7 @@ namespace Reconciliation
         private bool isSwitchingMode = false;
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
         private readonly ToolTip _toolTip = new();
+        private readonly Timer _logFlashTimer = new();
 
         #region Form_UX
 
@@ -74,6 +75,13 @@ namespace Reconciliation
             {
                 tbcMenu.TabPages.Remove(tabPage3);
             }
+
+            _logFlashTimer.Interval = 5000;
+            _logFlashTimer.Tick += (s, e) =>
+            {
+                tabPage2.ForeColor = SystemColors.ControlText;
+                _logFlashTimer.Stop();
+            };
         }
         private void EnableDoubleBuffering(Control control)
         {
@@ -382,7 +390,7 @@ namespace Reconciliation
                 }
 
                 PopulateLogsGrid();
-                tbcMenu.SelectedTab = tabPage2;
+                FlashLogsTab();
             }
             catch (Exception exception)
             {
@@ -1125,6 +1133,13 @@ namespace Reconciliation
             }
 
             dgvLogs.DataSource = table;
+        }
+
+        private void FlashLogsTab()
+        {
+            tabPage2.ForeColor = Color.Red;
+            _logFlashTimer.Stop();
+            _logFlashTimer.Start();
         }
         // Helper method to safely convert to decimal
         private decimal SafeConvertToDecimal(object value)

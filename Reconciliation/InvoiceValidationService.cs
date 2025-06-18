@@ -89,19 +89,25 @@ namespace Reconciliation
 
             if (msrpPrice > 5)
             {
-                const decimal minDiscount = 18.00m;
-                const decimal maxDiscount = 20.00m;
+                const decimal minDiscount = 18.0m;
+                const decimal maxDiscount = 20.0m;
                 if (partnerDiscountPercentage <= 0)
                 {
                     row["Partner Discount Validation"] = $"Invalid: MSRP ({msrpPrice}) is greater than 5, but PartnerDiscountPercentage is {partnerDiscountPercentage}%.";
                     isInvalid = true;
                     highPriorityErrors++;
                 }
-                else if (partnerDiscountPercentage < minDiscount || partnerDiscountPercentage > maxDiscount)
+                else
                 {
-                    row["Partner Discount Validation"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage:F2}%) is not between {minDiscount:F2}% and {maxDiscount:F2}%.";
-                    isInvalid = true;
-                    highPriorityErrors++;
+                    decimal partner = Math.Round(partnerDiscountPercentage, 1);
+                    decimal lower = Math.Round(minDiscount, 1);
+                    decimal upper = Math.Round(maxDiscount, 1);
+                    if (partner < lower - 0.01m || partner > upper + 0.01m)
+                    {
+                        row["Partner Discount Validation"] = $"Invalid: PartnerDiscountPercentage ({partnerDiscountPercentage:F2}%) is not between {minDiscount:F2}% and {maxDiscount:F2}%.";
+                        isInvalid = true;
+                        highPriorityErrors++;
+                    }
                 }
             }
 

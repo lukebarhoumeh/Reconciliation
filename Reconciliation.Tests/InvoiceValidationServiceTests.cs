@@ -49,6 +49,15 @@ namespace Reconciliation.Tests
         }
 
         [Fact]
+        public void ValidateInvoice_PartnerDiscount205_Passes()
+        {
+            var dt = CreateTable();
+            dt.Rows.Add("2024-01-01","2024-01-30","6","30","20.05","5","10","10");
+            var result = new InvoiceValidationService().ValidateInvoice(dt);
+            Assert.Empty(result.Rows);
+        }
+
+        [Fact]
         public void ValidateInvoice_HierarchyError()
         {
             var dt = CreateTable();

@@ -37,7 +37,7 @@
     <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />
     <Compile Include="../Reconciliation/InvoiceValidationService.cs" Link="InvoiceValidationService.cs" />
     <Compile Include="../Reconciliation/PriceMismatchService.cs" Link="PriceMismatchService.cs" />
-    <Compile Include="../Reconciliation/FormatHelper.cs" Link="FormatHelper.cs" />
+    <Compile Include="../Reconciliation/NumericFormatter.cs" Link="NumericFormatter.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

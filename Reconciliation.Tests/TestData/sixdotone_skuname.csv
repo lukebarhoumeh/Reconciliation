@@ -1,0 +1,2 @@
+SkuName,BillingCycle,ResourceName,ValidFrom,ValidTo,PurchaseDate,PartnerTotal,InternalReferenceId,CustomerName,CustomerDomainName,ProductId,ChargeType
+SKU_1,Monthly,Regular Product,2024-02-01,2024-02-28,2024-02-01,200,REF2,Client,client.com,prod2,Usage

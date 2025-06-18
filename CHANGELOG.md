@@ -13,3 +13,7 @@
 - Extracted comparison logic into `ReconciliationService` with dedicated tests.
 - Added `PriceMismatchService` for price difference detection and Excel export.
 - Fixed crash when highlighting results with missing "Reason" column by always creating it and skipping highlight when absent.
+- MSP Hub import handles `SkuName` column when fuzzy matching is enabled.
+- Partner discount validation rounds to one decimal place to allow 20.0–20.1%.
+- Results no longer auto-switch to the Logs tab; the tab header flashes instead.
+- Numeric formatter extracted and applied to discrepancy values.
