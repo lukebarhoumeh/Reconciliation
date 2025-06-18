@@ -101,8 +101,8 @@ namespace Reconciliation
                 decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal db))
             {
                 bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase);
-                string left = percent ? NumericFormatter.FormatPercent(da) : NumericFormatter.FormatMoney(da);
-                string right = percent ? NumericFormatter.FormatPercent(db) : NumericFormatter.FormatMoney(db);
+                string left = percent ? NumericFormatter.Percent(da) : NumericFormatter.Money(da);
+                string right = percent ? NumericFormatter.Percent(db) : NumericFormatter.Money(db);
                 return $"Numeric mismatch in {column}: {left} vs {right}";
             }
             if (DateTime.TryParse(a, out DateTime ta) && DateTime.TryParse(b, out DateTime tb))
@@ -125,7 +125,7 @@ namespace Reconciliation
             if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
             {
                 bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase) || value.Trim().EndsWith("%");
-                string formatted = percent ? NumericFormatter.FormatPercent(d) : NumericFormatter.FormatMoney(d);
+                string formatted = percent ? NumericFormatter.Percent(d) : NumericFormatter.Money(d);
                 return percent && value.Trim().EndsWith("%") ? formatted + "%" : formatted;
             }
             return value;
@@ -178,7 +178,9 @@ namespace Reconciliation
             var lines = new List<string> { "Row,Column,LeftValue,RightValue,Explanation" };
             foreach (var d in _discrepancies)
             {
-                string line = string.Join(',', d.Row, Escape(d.Column), Escape(d.LeftValue), Escape(d.RightValue), Escape(d.Explanation));
+                string left = FormatValue(d.LeftValue, d.Column);
+                string right = FormatValue(d.RightValue, d.Column);
+                string line = string.Join(',', d.Row, Escape(d.Column), Escape(left), Escape(right), Escape(d.Explanation));
                 lines.Add(line);
             }
             File.WriteAllLines(path, lines);

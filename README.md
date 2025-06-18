@@ -21,7 +21,9 @@ Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
   as `SkuName`, `SKU` or `sku_id` are automatically mapped to `SkuId` during
   import.
 - Human-friendly error and warning logs with timestamps and summaries.
+- Logs tab header flashes red for five seconds when new entries are added.
 - Repeated parsing errors are summarised after five occurrences to reduce noise.
+- Money and percent values display with at most two decimals.
 - Data quality warnings highlight when more than 10% of rows contain blank or zero values in critical fields.
 - Discrepancy detector with numeric/date tolerance and fuzzy text comparison.
 

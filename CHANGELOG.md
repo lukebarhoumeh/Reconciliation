@@ -17,3 +17,5 @@
 - Partner discount validation rounds to one decimal place to allow 20.0–20.1%.
 - Results no longer auto-switch to the Logs tab; the tab header flashes instead.
 - Numeric formatter extracted and applied to discrepancy values.
+- Partner discount validation rounds values before comparison and accepts up to 20.1%.
+- Exported logs and grids show money and percentages with at most two decimals.
