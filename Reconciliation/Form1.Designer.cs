@@ -116,34 +116,34 @@
             // 
             // btnMaximized
             // 
-            btnMaximized.BackColor = Color.Transparent;
+            btnMaximized.BackColor = Color.FromArgb(0, 122, 204);
             btnMaximized.Dock = DockStyle.Right;
             btnMaximized.FlatAppearance.BorderSize = 0;
             btnMaximized.FlatStyle = FlatStyle.Flat;
-            btnMaximized.Font = new Font("Arial", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnMaximized.Font = new Font("Segoe UI", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnMaximized.ForeColor = Color.White;
             btnMaximized.Location = new Point(2717, 0);
             btnMaximized.Name = "btnMaximized";
             btnMaximized.Size = new Size(30, 41);
             btnMaximized.TabIndex = 3;
-            btnMaximized.Text = "_";
+            btnMaximized.Text = "";
             btnMaximized.TextAlign = ContentAlignment.TopCenter;
             btnMaximized.UseVisualStyleBackColor = false;
             btnMaximized.Click += btnMaximized_Click;
-            // 
+            //
             // btnClose
-            // 
-            btnClose.BackColor = Color.Transparent;
+            //
+            btnClose.BackColor = Color.FromArgb(0, 122, 204);
             btnClose.Dock = DockStyle.Right;
             btnClose.FlatAppearance.BorderSize = 0;
             btnClose.FlatStyle = FlatStyle.Flat;
-            btnClose.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnClose.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnClose.ForeColor = Color.White;
             btnClose.Location = new Point(2747, 0);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(42, 41);
             btnClose.TabIndex = 2;
-            btnClose.Text = "X";
+            btnClose.Text = "";
             btnClose.UseVisualStyleBackColor = false;
             btnClose.Click += btnClose_Click;
             // 
@@ -269,19 +269,20 @@
             // btnReset
             // 
             btnReset.Anchor = AnchorStyles.Right;
-            btnReset.BackColor = Color.FromArgb(211, 234, 253);
+            btnReset.BackColor = Color.FromArgb(0, 122, 204);
             btnReset.Cursor = Cursors.Hand;
             btnReset.Enabled = false;
             btnReset.FlatAppearance.BorderSize = 0;
             btnReset.FlatStyle = FlatStyle.Flat;
-            btnReset.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnReset.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnReset.ImageAlign = ContentAlignment.MiddleLeft;
             btnReset.Location = new Point(2496, 440);
             btnReset.Name = "btnReset";
             btnReset.Padding = new Padding(12, 5, 12, 5);
             btnReset.Size = new Size(143, 40);
             btnReset.TabIndex = 38;
-            btnReset.Text = "Reset";
+            btnReset.ForeColor = Color.White;
+            btnReset.Text = "";
             btnReset.UseVisualStyleBackColor = false;
             btnReset.Click += btnClear_Click;
             // 
@@ -333,31 +334,32 @@
             // btnCompare
             // 
             btnCompare.Anchor = AnchorStyles.Right;
-            btnCompare.BackColor = Color.FromArgb(211, 234, 253);
+            btnCompare.BackColor = Color.FromArgb(0, 122, 204);
             btnCompare.Cursor = Cursors.Hand;
             btnCompare.Enabled = false;
             btnCompare.FlatAppearance.BorderSize = 0;
             btnCompare.FlatStyle = FlatStyle.Flat;
-            btnCompare.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnCompare.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnCompare.ImageAlign = ContentAlignment.MiddleLeft;
             btnCompare.Location = new Point(2366, 440);
             btnCompare.Name = "btnCompare";
             btnCompare.Padding = new Padding(12, 5, 12, 5);
             btnCompare.Size = new Size(124, 40);
             btnCompare.TabIndex = 33;
-            btnCompare.Text = "Reconcile";
+            btnCompare.ForeColor = Color.White;
+            btnCompare.Text = "";
             btnCompare.UseVisualStyleBackColor = false;
             btnCompare.Click += btnCompare_Click;
             // 
             // btnExportToCsv
             // 
             btnExportToCsv.Anchor = AnchorStyles.Right;
-            btnExportToCsv.BackColor = Color.FromArgb(211, 234, 253);
+            btnExportToCsv.BackColor = Color.FromArgb(0, 122, 204);
             btnExportToCsv.Cursor = Cursors.Hand;
             btnExportToCsv.Enabled = false;
             btnExportToCsv.FlatAppearance.BorderSize = 0;
             btnExportToCsv.FlatStyle = FlatStyle.Flat;
-            btnExportToCsv.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnExportToCsv.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnExportToCsv.Image = (Image)resources.GetObject("btnExportToCsv.Image");
             btnExportToCsv.ImageAlign = ContentAlignment.MiddleLeft;
             btnExportToCsv.Location = new Point(2645, 440);
@@ -365,7 +367,8 @@
             btnExportToCsv.Padding = new Padding(12, 5, 12, 5);
             btnExportToCsv.Size = new Size(124, 40);
             btnExportToCsv.TabIndex = 32;
-            btnExportToCsv.Text = "Export";
+            btnExportToCsv.ForeColor = Color.White;
+            btnExportToCsv.Text = "";
             btnExportToCsv.TextAlign = ContentAlignment.MiddleRight;
             btnExportToCsv.UseVisualStyleBackColor = false;
             btnExportToCsv.Click += btnExportToCsv_Click;
@@ -424,17 +427,17 @@
             dataGridViewCellStyle1.BackColor = Color.RoyalBlue;
             dataGridViewCellStyle1.Font = new Font("Arial Narrow", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             dataGridViewCellStyle1.ForeColor = Color.White;
-            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(32, 93, 170);
+            dataGridViewCellStyle1.SelectionForeColor = Color.White;
             dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
             dgResultdata.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             dgResultdata.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.BackColor = Color.White;
             dataGridViewCellStyle2.Font = new Font("Arial Narrow", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             dataGridViewCellStyle2.ForeColor = Color.Black;
-            dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(32, 93, 170);
+            dataGridViewCellStyle2.SelectionForeColor = Color.White;
             dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
             dgResultdata.DefaultCellStyle = dataGridViewCellStyle2;
             dgResultdata.Dock = DockStyle.Bottom;
@@ -470,11 +473,11 @@
             // 
             btnImportSixDotOneFile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnImportSixDotOneFile.AutoSize = true;
-            btnImportSixDotOneFile.BackColor = Color.FromArgb(211, 234, 253);
+            btnImportSixDotOneFile.BackColor = Color.FromArgb(0, 122, 204);
             btnImportSixDotOneFile.Cursor = Cursors.Hand;
             btnImportSixDotOneFile.FlatAppearance.BorderSize = 0;
             btnImportSixDotOneFile.FlatStyle = FlatStyle.Flat;
-            btnImportSixDotOneFile.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnImportSixDotOneFile.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnImportSixDotOneFile.Image = (Image)resources.GetObject("btnImportSixDotOneFile.Image");
             btnImportSixDotOneFile.ImageAlign = ContentAlignment.MiddleLeft;
             btnImportSixDotOneFile.Location = new Point(2529, 89);
@@ -482,7 +485,8 @@
             btnImportSixDotOneFile.Padding = new Padding(0, 8, 0, 8);
             btnImportSixDotOneFile.Size = new Size(240, 52);
             btnImportSixDotOneFile.TabIndex = 23;
-            btnImportSixDotOneFile.Text = "Upload MSP Hub Invoice ";
+            btnImportSixDotOneFile.ForeColor = Color.White;
+            btnImportSixDotOneFile.Text = "";
             btnImportSixDotOneFile.UseVisualStyleBackColor = false;
             btnImportSixDotOneFile.Click += btnImportSixDotOneFile_Click;
             // 
@@ -539,11 +543,11 @@
             // 
             btnImportMicrosoft.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnImportMicrosoft.AutoSize = true;
-            btnImportMicrosoft.BackColor = Color.FromArgb(211, 234, 253);
+            btnImportMicrosoft.BackColor = Color.FromArgb(0, 122, 204);
             btnImportMicrosoft.Cursor = Cursors.Hand;
             btnImportMicrosoft.FlatAppearance.BorderSize = 0;
             btnImportMicrosoft.FlatStyle = FlatStyle.Flat;
-            btnImportMicrosoft.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnImportMicrosoft.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnImportMicrosoft.Image = (Image)resources.GetObject("btnImportMicrosoft.Image");
             btnImportMicrosoft.ImageAlign = ContentAlignment.MiddleLeft;
             btnImportMicrosoft.Location = new Point(2529, 152);
@@ -551,7 +555,8 @@
             btnImportMicrosoft.Padding = new Padding(0, 8, 0, 8);
             btnImportMicrosoft.Size = new Size(240, 52);
             btnImportMicrosoft.TabIndex = 1;
-            btnImportMicrosoft.Text = "Upload Microsoft Invoice";
+            btnImportMicrosoft.ForeColor = Color.White;
+            btnImportMicrosoft.Text = "";
             btnImportMicrosoft.UseVisualStyleBackColor = false;
             btnImportMicrosoft.Click += btnImportMicrosoft_Click;
             // 
@@ -619,12 +624,12 @@
             // btnPriceMismatchingExportToCsv
             // 
             btnPriceMismatchingExportToCsv.Anchor = AnchorStyles.Right;
-            btnPriceMismatchingExportToCsv.BackColor = Color.FromArgb(211, 234, 253);
+            btnPriceMismatchingExportToCsv.BackColor = Color.FromArgb(0, 122, 204);
             btnPriceMismatchingExportToCsv.Cursor = Cursors.Hand;
             btnPriceMismatchingExportToCsv.Enabled = false;
             btnPriceMismatchingExportToCsv.FlatAppearance.BorderSize = 0;
             btnPriceMismatchingExportToCsv.FlatStyle = FlatStyle.Flat;
-            btnPriceMismatchingExportToCsv.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnPriceMismatchingExportToCsv.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnPriceMismatchingExportToCsv.Image = (Image)resources.GetObject("btnPriceMismatchingExportToCsv.Image");
             btnPriceMismatchingExportToCsv.ImageAlign = ContentAlignment.MiddleLeft;
             btnPriceMismatchingExportToCsv.Location = new Point(1137, 1);
@@ -632,7 +637,8 @@
             btnPriceMismatchingExportToCsv.Padding = new Padding(12, 5, 12, 5);
             btnPriceMismatchingExportToCsv.Size = new Size(124, 40);
             btnPriceMismatchingExportToCsv.TabIndex = 41;
-            btnPriceMismatchingExportToCsv.Text = "Export";
+            btnPriceMismatchingExportToCsv.ForeColor = Color.White;
+            btnPriceMismatchingExportToCsv.Text = "";
             btnPriceMismatchingExportToCsv.TextAlign = ContentAlignment.MiddleRight;
             btnPriceMismatchingExportToCsv.UseVisualStyleBackColor = false;
             btnPriceMismatchingExportToCsv.Click += btnPriceMismatchingExportToCsv_Click;
@@ -667,17 +673,17 @@
             dataGridViewCellStyle3.BackColor = Color.RoyalBlue;
             dataGridViewCellStyle3.Font = new Font("Arial Narrow", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             dataGridViewCellStyle3.ForeColor = Color.White;
-            dataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle3.SelectionBackColor = Color.FromArgb(32, 93, 170);
+            dataGridViewCellStyle3.SelectionForeColor = Color.White;
             dataGridViewCellStyle3.WrapMode = DataGridViewTriState.True;
             dgAzurePriceMismatch.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle3;
             dgAzurePriceMismatch.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle4.BackColor = SystemColors.Window;
+            dataGridViewCellStyle4.BackColor = Color.White;
             dataGridViewCellStyle4.Font = new Font("Arial Narrow", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             dataGridViewCellStyle4.ForeColor = Color.Black;
-            dataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(32, 93, 170);
+            dataGridViewCellStyle4.SelectionForeColor = Color.White;
             dataGridViewCellStyle4.WrapMode = DataGridViewTriState.False;
             dgAzurePriceMismatch.DefaultCellStyle = dataGridViewCellStyle4;
             dgAzurePriceMismatch.Dock = DockStyle.Bottom;
@@ -749,31 +755,32 @@
             // btnResetLogs
             // 
             btnResetLogs.Anchor = AnchorStyles.Right;
-            btnResetLogs.BackColor = Color.FromArgb(211, 234, 253);
+            btnResetLogs.BackColor = Color.FromArgb(0, 122, 204);
             btnResetLogs.Cursor = Cursors.Hand;
             btnResetLogs.Enabled = false;
             btnResetLogs.FlatAppearance.BorderSize = 0;
             btnResetLogs.FlatStyle = FlatStyle.Flat;
-            btnResetLogs.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnResetLogs.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnResetLogs.ImageAlign = ContentAlignment.MiddleLeft;
             btnResetLogs.Location = new Point(959, -38);
             btnResetLogs.Name = "btnResetLogs";
             btnResetLogs.Padding = new Padding(12, 5, 12, 5);
             btnResetLogs.Size = new Size(148, 40);
             btnResetLogs.TabIndex = 34;
-            btnResetLogs.Text = "Reset Logs";
+            btnResetLogs.ForeColor = Color.White;
+            btnResetLogs.Text = "";
             btnResetLogs.UseVisualStyleBackColor = false;
             btnResetLogs.Click += btnResetLogs_Click;
             // 
             // btnExportLogs
             // 
             btnExportLogs.Anchor = AnchorStyles.Right;
-            btnExportLogs.BackColor = Color.FromArgb(211, 234, 253);
+            btnExportLogs.BackColor = Color.FromArgb(0, 122, 204);
             btnExportLogs.Cursor = Cursors.Hand;
             btnExportLogs.Enabled = false;
             btnExportLogs.FlatAppearance.BorderSize = 0;
             btnExportLogs.FlatStyle = FlatStyle.Flat;
-            btnExportLogs.Font = new Font("Arial Narrow", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnExportLogs.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnExportLogs.Image = (Image)resources.GetObject("btnExportLogs.Image");
             btnExportLogs.ImageAlign = ContentAlignment.MiddleLeft;
             btnExportLogs.Location = new Point(1113, -38);
@@ -781,7 +788,8 @@
             btnExportLogs.Padding = new Padding(12, 5, 12, 5);
             btnExportLogs.Size = new Size(148, 40);
             btnExportLogs.TabIndex = 33;
-            btnExportLogs.Text = "Export Logs";
+            btnExportLogs.ForeColor = Color.White;
+            btnExportLogs.Text = "";
             btnExportLogs.TextAlign = ContentAlignment.MiddleRight;
             btnExportLogs.UseVisualStyleBackColor = false;
             btnExportLogs.Click += btnExportLogs_Click;
@@ -821,6 +829,7 @@
             Name = "Form1";
             Text = "Reconciliation Tool";
             WindowState = FormWindowState.Normal;
+            Load += Form1_Load;
             panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
             panel2.ResumeLayout(false);
@@ -895,5 +904,13 @@
         private Button btnPriceMismatchingExportToCsv;
         private Label label5;
         private PictureBox pictureBox2;
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Font = new Font("Segoe UI", 9F);
+            dgResultdata.DefaultCellStyle.Font = new Font("Consolas", 9F);
+            dgAzurePriceMismatch.DefaultCellStyle.Font = new Font("Consolas", 9F);
+            dgvLogs.DefaultCellStyle.Font = new Font("Consolas", 9F);
+        }
     }
 }
