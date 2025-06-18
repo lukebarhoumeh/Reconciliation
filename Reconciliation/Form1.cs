@@ -1571,39 +1571,41 @@ namespace Reconciliation
 
         private void DataGridView1_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
         {
-            if (rbExternal.Checked == true)
-            {
-                var row = dgResultdata.Rows[e.RowIndex];
+            if (!rbExternal.Checked)
+                return;
 
-                // Apply yellow background only to the "Reason" column
-                DataGridViewCell reasonCell = row.Cells["Reason"];
-                if (reasonCell != null && reasonCell.Value != null)
+            var row = dgResultdata.Rows[e.RowIndex];
+            if (!row.DataGridView.Columns.Contains("Reason"))
+                return;
+
+            // Apply yellow background only to the "Reason" column
+            DataGridViewCell reasonCell = row.Cells["Reason"];
+            if (reasonCell != null && reasonCell.Value != null)
+            {
+                string reasonValue = reasonCell.Value.ToString();
+                if (!string.IsNullOrEmpty(reasonValue))
                 {
-                    string reasonValue = reasonCell.Value.ToString();
-                    if (!string.IsNullOrEmpty(reasonValue))
+                    if (reasonValue.Contains("This Line Item is missing in Microsoft Invoice") ||
+                        reasonValue.Contains("This Line Item is missing in MSP Hub Invoice"))
                     {
-                        if (reasonValue.Contains("This Line Item is missing in Microsoft Invoice") ||
-                            reasonValue.Contains("This Line Item is missing in MSP Hub Invoice"))
-                        {
-                            // Set only the Reason column to Yellow
-                            reasonCell.Style.BackColor = Color.Yellow;
-                            reasonCell.Style.ForeColor = Color.Black;
-                        }
+                        // Set only the Reason column to Yellow
+                        reasonCell.Style.BackColor = Color.Yellow;
+                        reasonCell.Style.ForeColor = Color.Black;
                     }
                 }
+            }
 
-                // Existing mismatch highlighting logic
-                foreach (DataGridViewCell cell in row.Cells)
+            // Existing mismatch highlighting logic
+            foreach (DataGridViewCell cell in row.Cells)
+            {
+                if (cell.Value != null)
                 {
-                    if (cell.Value != null)
+                    string cellValue = cell.Value.ToString();
+                    if (cellValue.Contains(MismatchValueIdentifier.MicrosoftMarker) ||
+                        cellValue.Contains(MismatchValueIdentifier.SixDotOneMarker))
                     {
-                        string cellValue = cell.Value.ToString();
-                        if (cellValue.Contains(MismatchValueIdentifier.MicrosoftMarker) ||
-                            cellValue.Contains(MismatchValueIdentifier.SixDotOneMarker))
-                        {
-                            row.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#EEDC5B"); // Yellow for mismatch
-                            return;
-                        }
+                        row.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#EEDC5B"); // Yellow for mismatch
+                        return;
                     }
                 }
             }
