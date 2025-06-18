@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Reconciliation_Tool.Properties {
+namespace Reconciliation.Properties {
     using System;
     
     
