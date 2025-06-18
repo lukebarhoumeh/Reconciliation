@@ -32,5 +32,16 @@ namespace Reconciliation.Tests
             Assert.True(view.Table.Columns.Contains("BillingCycle"));
             Assert.False(view.Table.Columns.Contains("BillingFrequency"));
         }
+
+        [Fact]
+        public void ImportSixDotOneInvoice_FuzzySkuNameMapped()
+        {
+            var path = Path.Combine("TestData", "sixdotone_skuname.csv");
+            var service = new FileImportService(true);
+            ErrorLogger.Clear();
+            var view = service.ImportSixDotOneInvoice(path);
+            Assert.Single(view);
+            Assert.Contains("SkuId", view.Table.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+        }
     }
 }

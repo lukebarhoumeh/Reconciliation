@@ -78,6 +78,11 @@ namespace Reconciliation
                 throw new ArgumentException("The selected file contains no rows.");
             }
             DataQualityValidator.Run(dataView.Table, fileInfo.Name);
+            if (_allowFuzzyColumns)
+            {
+                foreach (var col in _requiredMspHubColumns)
+                    dataView.Table.TryFuzzyRenameColumn(col);
+            }
             SchemaValidator.RequireColumns(dataView.Table, "MSP Hub invoice", _requiredMspHubColumns, _allowFuzzyColumns);
 
             if (dataView.Table.Columns.Contains("SkuId"))

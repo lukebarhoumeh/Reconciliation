@@ -101,8 +101,8 @@ namespace Reconciliation
                 decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal db))
             {
                 bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase);
-                string left = percent ? FormatHelper.FormatPercent(da) : FormatHelper.FormatMoney(da);
-                string right = percent ? FormatHelper.FormatPercent(db) : FormatHelper.FormatMoney(db);
+                string left = percent ? NumericFormatter.FormatPercent(da) : NumericFormatter.FormatMoney(da);
+                string right = percent ? NumericFormatter.FormatPercent(db) : NumericFormatter.FormatMoney(db);
                 return $"Numeric mismatch in {column}: {left} vs {right}";
             }
             if (DateTime.TryParse(a, out DateTime ta) && DateTime.TryParse(b, out DateTime tb))
@@ -125,7 +125,7 @@ namespace Reconciliation
             if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
             {
                 bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase) || value.Trim().EndsWith("%");
-                string formatted = percent ? FormatHelper.FormatPercent(d) : FormatHelper.FormatMoney(d);
+                string formatted = percent ? NumericFormatter.FormatPercent(d) : NumericFormatter.FormatMoney(d);
                 return percent && value.Trim().EndsWith("%") ? formatted + "%" : formatted;
             }
             return value;
