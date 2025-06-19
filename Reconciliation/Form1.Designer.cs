@@ -470,18 +470,18 @@ using Reconciliation.Properties;
             //
             cmbFieldFilter.Location = new Point(1200, 260);
             cmbFieldFilter.Name = "cmbFieldFilter";
-            cmbFieldFilter.PlaceholderText = "e.g., Product Code, Invoice Date";
             cmbFieldFilter.Size = new Size(150, 27);
             cmbFieldFilter.TabIndex = 38;
             cmbFieldFilter.DropDownStyle = ComboBoxStyle.DropDown;
             cmbFieldFilter.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbFieldFilter.AutoCompleteSource = AutoCompleteSource.ListItems;
+            cmbFieldFilter.Items.Add("-- Select a Field --");
+            cmbFieldFilter.SelectedIndex = 0;
             //
             // txtExplanationFilter
             //
             txtExplanationFilter.Location = new Point(1360, 260);
             txtExplanationFilter.Name = "txtExplanationFilter";
-            txtExplanationFilter.PlaceholderText = "e.g., mismatch, missing, date";
             txtExplanationFilter.Size = new Size(200, 27);
             txtExplanationFilter.TabIndex = 39;
             //
