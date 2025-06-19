@@ -325,17 +325,8 @@ namespace Reconciliation
 
                     Invoke(new Action(() =>
                     {
-                        var mismatchData = _resultData.Table.Clone();
-
-                        foreach (DataRow row in _resultData.Table.Rows)
-                        {
-                            DataRow newRow = mismatchData.NewRow();
-                            newRow.ItemArray = row.ItemArray; // Copy row data
-                            mismatchData.Rows.Add(newRow); // Add row to new DataTable
-                        }
-
-                        // **Prevent Sorting**
-                        BindingSource bindingSource = new BindingSource { DataSource = mismatchData };
+                        // Bind directly to the DataView so RowFilter updates reflect immediately
+                        BindingSource bindingSource = new BindingSource { DataSource = _resultData };
                         dgResultdata.DataSource = bindingSource;
                         AutoFitColumns(dgResultdata);
 
@@ -380,16 +371,8 @@ namespace Reconciliation
 
                     Invoke(new Action(() =>
                     {
-                        var invalidData = _resultData.Table.Clone();
-
-                        foreach (DataRow row in _resultData.Table.Rows)
-                        {
-                            DataRow newRow = invalidData.NewRow();
-                            newRow.ItemArray = row.ItemArray; // Copy row data
-                            invalidData.Rows.Add(newRow); // Add row to new DataTable
-                        }
-
-                        dgResultdata.DataSource = invalidData.DefaultView;
+                        BindingSource bindingSource = new BindingSource { DataSource = _resultData };
+                        dgResultdata.DataSource = bindingSource;
                         AutoFitColumns(dgResultdata);
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
