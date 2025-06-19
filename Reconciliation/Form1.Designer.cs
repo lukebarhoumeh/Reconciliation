@@ -495,7 +495,7 @@ using Reconciliation.Properties;
             txtExplanationFilter.Name = "txtExplanationFilter";
             txtExplanationFilter.Size = new Size(200, 27);
             txtExplanationFilter.TabIndex = 40;
-            txtExplanationFilter.PlaceholderText = "Type a keyword (e.g., missing, mismatch, date)";
+            txtExplanationFilter.PlaceholderText = "Type a keyword (e.g., missing, date, mismatch)";
             //
             // dgResultdata
             // 
