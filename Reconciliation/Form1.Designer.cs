@@ -89,6 +89,7 @@ using Reconciliation.Properties;
             dgvLogs = new DataGridView();
             lblLogsSummary = new Label();
             lblMismatchSummary = new Label();
+            lblExplanationFilter = new Label();
             cmbFieldFilter = new ComboBox();
             txtExplanationFilter = new TextBox();
             textLogs = new RichTextBox();
@@ -240,6 +241,7 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
             splitMain.Panel1.Controls.Add(lblMismatchSummary);
             splitMain.Panel1.Controls.Add(cmbFieldFilter);
+            splitMain.Panel1.Controls.Add(lblExplanationFilter);
             splitMain.Panel1.Controls.Add(txtExplanationFilter);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
@@ -478,12 +480,22 @@ using Reconciliation.Properties;
             cmbFieldFilter.Items.Add("-- Select a Field --");
             cmbFieldFilter.SelectedIndex = 0;
             //
+            // lblExplanationFilter
+            //
+            lblExplanationFilter.AutoSize = true;
+            lblExplanationFilter.Location = new Point(1360, 263);
+            lblExplanationFilter.Name = "lblExplanationFilter";
+            lblExplanationFilter.Size = new Size(128, 20);
+            lblExplanationFilter.TabIndex = 39;
+            lblExplanationFilter.Text = "Filter Explanation:";
+            //
             // txtExplanationFilter
             //
-            txtExplanationFilter.Location = new Point(1360, 260);
+            txtExplanationFilter.Location = new Point(1520, 260);
             txtExplanationFilter.Name = "txtExplanationFilter";
             txtExplanationFilter.Size = new Size(200, 27);
-            txtExplanationFilter.TabIndex = 39;
+            txtExplanationFilter.TabIndex = 40;
+            txtExplanationFilter.PlaceholderText = "Type a keyword (e.g., missing, mismatch, date)";
             //
             // dgResultdata
             // 
@@ -992,6 +1004,7 @@ using Reconciliation.Properties;
         private DataGridView dgvLogs;
         private Label lblLogsSummary;
         private Label lblMismatchSummary;
+        private Label lblExplanationFilter;
         private ComboBox cmbFieldFilter;
         private TextBox txtExplanationFilter;
         private RichTextBox textLogs;
