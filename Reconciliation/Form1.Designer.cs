@@ -799,7 +799,7 @@ using Reconciliation.Properties;
             btnResetLogs.FlatStyle = FlatStyle.Flat;
             btnResetLogs.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnResetLogs.ImageAlign = ContentAlignment.MiddleLeft;
-            btnResetLogs.Location = new Point(959, -38);
+            btnResetLogs.Location = new Point(959, 8);
             btnResetLogs.Name = "btnResetLogs";
             btnResetLogs.Margin = new Padding(8, 0, 0, 0);
             btnResetLogs.Padding = new Padding(8, 0, 8, 0);
@@ -822,7 +822,7 @@ using Reconciliation.Properties;
             btnExportLogs.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnExportLogs.Image = (Image)resources.GetObject("btnExportLogs.Image");
             btnExportLogs.ImageAlign = ContentAlignment.MiddleLeft;
-            btnExportLogs.Location = new Point(1113, -38);
+            btnExportLogs.Location = new Point(1113, 8);
             btnExportLogs.Name = "btnExportLogs";
             btnExportLogs.Margin = new Padding(8, 0, 0, 0);
             btnExportLogs.Padding = new Padding(8, 0, 8, 0);
@@ -836,11 +836,12 @@ using Reconciliation.Properties;
             //
             // lblLogsSummary
             //
+            lblLogsSummary.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblLogsSummary.AutoSize = true;
-            lblLogsSummary.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            lblLogsSummary.Location = new Point(3, 6);
+            lblLogsSummary.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point);
+            lblLogsSummary.Location = new Point(3, 520);
             lblLogsSummary.Name = "lblLogsSummary";
-            lblLogsSummary.Size = new Size(167, 20);
+            lblLogsSummary.Size = new Size(171, 23);
             lblLogsSummary.TabIndex = 36;
             lblLogsSummary.Text = "⚠ 0 Warnings, 0 Errors";
             //

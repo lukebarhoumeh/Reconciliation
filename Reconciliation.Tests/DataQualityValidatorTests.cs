@@ -29,8 +29,8 @@ namespace Reconciliation.Tests
                 ErrorLogger.Export(path);
                 var lines = File.ReadAllLines(path);
                 Assert.Contains("Timestamp,ErrorLevel", lines[0]);
-                Assert.Contains("Total Errors", lines[^1]);
-            }
+                Assert.Equal(2, lines.Length);
+                }
             finally
             {
                 File.Delete(path);
