@@ -51,7 +51,7 @@ namespace Reconciliation
                 bool hasRight = i < right.Rows.Count;
                 if (!hasLeft || !hasRight)
                 {
-                    string reason = "Row missing";
+                    string reason = "Missing Rows";
                     AddSummary(reason);
                     if (!hasLeft)
                         _discrepancies.Add(new Discrepancy(i + 1, string.Empty, string.Empty, string.Empty, "Row missing in left table"));
@@ -70,7 +70,8 @@ namespace Reconciliation
                     if (IsEqual(a, b, col.ColumnName))
                         continue;
                     string expl = ExplainDifference(a, b, col.ColumnName);
-                    AddSummary(expl);
+                    string group = GetGroupName(col.ColumnName, expl);
+                    AddSummary(group);
                     _discrepancies.Add(new Discrepancy(i + 1, col.ColumnName, a, b, expl));
                 }
             }
@@ -103,21 +104,36 @@ namespace Reconciliation
                 bool percent = column.Contains("Percent", StringComparison.OrdinalIgnoreCase);
                 string left = percent ? NumericFormatter.Percent(da) : NumericFormatter.Money(da);
                 string right = percent ? NumericFormatter.Percent(db) : NumericFormatter.Money(db);
-                return $"Numeric mismatch in {column}: {left} vs {right}";
+                string friendly = FriendlyNameMap.Get(column);
+                return $"Numeric mismatch in {friendly}: {left} vs {right}";
             }
             if (DateTime.TryParse(a, out DateTime ta) && DateTime.TryParse(b, out DateTime tb))
             {
-                return $"Date mismatch in {column}: {ta:d} vs {tb:d}";
+                string friendly = FriendlyNameMap.Get(column);
+                return $"Date mismatch in {friendly}: {ta:d} vs {tb:d}";
             }
-            return $"Text mismatch in {column}: '{a}' vs '{b}'";
+            return $"Text mismatch in {FriendlyNameMap.Get(column)}: '{a}' vs '{b}'";
         }
 
-        private void AddSummary(string explanation)
+        private static string GetGroupName(string column, string explanation)
         {
-            if (_summary.ContainsKey(explanation))
-                _summary[explanation]++;
+            if (explanation.StartsWith("Row missing"))
+                return "Missing Rows";
+            if (column.Equals("SkuId", StringComparison.OrdinalIgnoreCase))
+                return "Product Code mismatches";
+            if (column.Equals("Quantity", StringComparison.OrdinalIgnoreCase))
+                return "Quantity mismatches";
+            if (column.Contains("Date", StringComparison.OrdinalIgnoreCase))
+                return "Date mismatches";
+            return "Other mismatches";
+        }
+
+        private void AddSummary(string group)
+        {
+            if (_summary.ContainsKey(group))
+                _summary[group]++;
             else
-                _summary[explanation] = 1;
+                _summary[group] = 1;
         }
 
         private static string FormatValue(string value, string column)
@@ -137,20 +153,23 @@ namespace Reconciliation
         public DataTable GetMismatches()
         {
             var table = new DataTable();
-            table.Columns.Add("Row", typeof(int));
-            table.Columns.Add("Column", typeof(string));
-            table.Columns.Add("LeftValue", typeof(string));
-            table.Columns.Add("RightValue", typeof(string));
+            table.Columns.Add("Row Number", typeof(int));
+            table.Columns.Add("Field Name", typeof(string));
+            table.Columns.Add("Our Value", typeof(string));
+            table.Columns.Add("Microsoft Value", typeof(string));
             table.Columns.Add("Explanation", typeof(string));
+            table.Columns.Add("Suggested Action", typeof(string));
 
             foreach (var d in _discrepancies)
             {
                 var row = table.NewRow();
-                row["Row"] = d.Row;
-                row["Column"] = d.Column;
-                row["LeftValue"] = FormatValue(d.LeftValue, d.Column);
-                row["RightValue"] = FormatValue(d.RightValue, d.Column);
+                string group = GetGroupName(d.Column, d.Explanation);
+                row["Row Number"] = d.Row;
+                row["Field Name"] = FriendlyNameMap.Get(d.Column);
+                row["Our Value"] = FormatValue(d.LeftValue, d.Column);
+                row["Microsoft Value"] = FormatValue(d.RightValue, d.Column);
                 row["Explanation"] = d.Explanation;
+                row["Suggested Action"] = GetSuggestedAction(group);
                 table.Rows.Add(row);
             }
 
@@ -163,10 +182,12 @@ namespace Reconciliation
         public string GetSummary()
         {
             var sb = new StringBuilder();
+            string summaryLine = string.Join(", ", _summary.Select(kv => $"{kv.Value} {kv.Key}"));
+            sb.AppendLine($"Summary: {summaryLine}");
             sb.AppendLine($"Total rows compared: {_rowsCompared}");
             sb.AppendLine($"Discrepancies found: {_discrepancies.Count}");
             foreach (var kv in _summary)
-                sb.AppendLine($"{kv.Value} rows: {kv.Key}");
+                sb.AppendLine($"{kv.Value} rows in group: {kv.Key}");
             return sb.ToString();
         }
 
@@ -175,12 +196,25 @@ namespace Reconciliation
         /// </summary>
         public void ExportCsv(string path)
         {
-            var lines = new List<string> { "Row,Column,LeftValue,RightValue,Explanation" };
+            string summaryLine = string.Join(", ", _summary.Select(kv => $"{kv.Value} {kv.Key}"));
+            var lines = new List<string>
+            {
+                $"Summary: {summaryLine}",
+                "Row Number,Field Name,Our Value,Microsoft Value,Explanation,Suggested Action"
+            };
             foreach (var d in _discrepancies)
             {
                 string left = FormatValue(d.LeftValue, d.Column);
                 string right = FormatValue(d.RightValue, d.Column);
-                string line = string.Join(',', d.Row, Escape(d.Column), Escape(left), Escape(right), Escape(d.Explanation));
+                string group = GetGroupName(d.Column, d.Explanation);
+                string action = GetSuggestedAction(group);
+                string line = string.Join(',',
+                    d.Row,
+                    Escape(FriendlyNameMap.Get(d.Column)),
+                    Escape(left),
+                    Escape(right),
+                    Escape(d.Explanation),
+                    Escape(action));
                 lines.Add(line);
             }
             File.WriteAllLines(path, lines);
@@ -194,6 +228,15 @@ namespace Reconciliation
             }
             return value;
         }
+
+        private static string GetSuggestedAction(string group)
+            => group switch
+            {
+                "Product Code mismatches" => "Please verify the correct product was invoiced.",
+                "Date mismatches" => "Review and confirm correct invoice date.",
+                "Quantity mismatches" => "Investigate reason for quantity difference.",
+                _ => string.Empty
+            };
     }
 
     /// <summary>

@@ -20,7 +20,7 @@ namespace Reconciliation.Tests
             detector.Compare(left, right);
             string summary = detector.GetSummary();
             Assert.Contains("Discrepancies found: 1", summary);
-            Assert.Contains("Numeric mismatch", summary);
+            Assert.Contains("Other mismatches", summary);
         }
     }
 }

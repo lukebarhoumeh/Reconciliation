@@ -29,6 +29,7 @@ namespace Reconciliation
         private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
         private readonly ToolTip _toolTip = new();
         private readonly FormsTimer _flashTimer = new();
+        private string _lastSummary = string.Empty;
 
         #region Form_UX
 
@@ -75,6 +76,8 @@ namespace Reconciliation
             dgAzurePriceMismatch.Visible = false;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             dgResultdata.RowPrePaint += DataGridView1_RowPrePaint;
+            txtFieldFilter.TextChanged += FilterResults;
+            txtExplanationFilter.TextChanged += FilterResults;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
                 tbcMenu.TabPages.Remove(tabPage3);
@@ -306,13 +309,14 @@ namespace Reconciliation
                 // Run the CPU-bound operations asynchronously
                 if (rbExternal.Checked == true)
                 {
+                    var svc = new ReconciliationService();
                     _resultData = await Task.Run(() =>
                     {
-                        return new ReconciliationService()
-                                   .CompareInvoices(_sixDotOneDataView.Table,
-                                                    _microsoftDataView.Table)
+                        return svc.CompareInvoices(_sixDotOneDataView.Table,
+                                                     _microsoftDataView.Table)
                                    .DefaultView;
                     });
+                    _lastSummary = svc.LastSummary;
 
                     Invoke(new Action(() =>
                     {
@@ -329,6 +333,13 @@ namespace Reconciliation
                         BindingSource bindingSource = new BindingSource { DataSource = mismatchData };
                         dgResultdata.DataSource = bindingSource;
                         AutoFitColumns(dgResultdata);
+
+                        lblMismatchSummary.Text = _lastSummary;
+
+                        if (dgResultdata.Columns.Contains("Product Code"))
+                            dgResultdata.Columns["Product Code"].HeaderCell.ToolTipText = "Product Code: The code identifying the product being invoiced.";
+                        if (dgResultdata.Columns.Contains("Invoice Date"))
+                            dgResultdata.Columns["Invoice Date"].HeaderCell.ToolTipText = "Invoice Date: The date charges apply.";
 
                         foreach (DataGridViewColumn column in dgResultdata.Columns)
                         {
@@ -658,6 +669,18 @@ namespace Reconciliation
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
             grid.AutoResizeColumns();
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+        }
+
+        private void FilterResults(object? sender, EventArgs e)
+        {
+            if (_resultData == null) return;
+            var filters = new List<string>();
+            if (!string.IsNullOrWhiteSpace(txtFieldFilter.Text))
+                filters.Add($"[Field Name] LIKE '%{txtFieldFilter.Text.Replace("'", "''")}%'");
+            if (!string.IsNullOrWhiteSpace(txtExplanationFilter.Text))
+                filters.Add($"[Explanation] LIKE '%{txtExplanationFilter.Text.Replace("'", "''")}%'");
+            _resultData.RowFilter = string.Join(" AND ", filters);
+            lblMismatchSummary.Text = _lastSummary;
         }
 
         #endregion Button_Clicks
