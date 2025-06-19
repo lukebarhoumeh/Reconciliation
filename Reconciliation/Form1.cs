@@ -62,6 +62,8 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnResetLogs, "Clear logs");
             _toolTip.SetToolTip(btnToggleFiles, "Hide/Show details");
             _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
+            _toolTip.SetToolTip(cmbFieldFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
+            _toolTip.SetToolTip(txtExplanationFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbExternal.Checked = true;
@@ -76,7 +78,8 @@ namespace Reconciliation
             dgAzurePriceMismatch.Visible = false;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             dgResultdata.RowPrePaint += DataGridView1_RowPrePaint;
-            txtFieldFilter.TextChanged += FilterResults;
+            cmbFieldFilter.TextChanged += FilterResults;
+            cmbFieldFilter.SelectedIndexChanged += FilterResults;
             txtExplanationFilter.TextChanged += FilterResults;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
@@ -335,6 +338,7 @@ namespace Reconciliation
                         AutoFitColumns(dgResultdata);
 
                         lblMismatchSummary.Text = _lastSummary;
+                        lblMismatchSummary.Visible = true;
 
                         if (dgResultdata.Columns.Contains("Product Code"))
                             dgResultdata.Columns["Product Code"].HeaderCell.ToolTipText = "Product Code: The code identifying the product being invoiced.";
@@ -348,6 +352,8 @@ namespace Reconciliation
 
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
+                        PopulateFieldFilterOptions();
+                        PopulateFieldFilterOptions();
 
                         if (dgResultdata.Rows.Count == 0)
                         {
@@ -675,12 +681,27 @@ namespace Reconciliation
         {
             if (_resultData == null) return;
             var filters = new List<string>();
-            if (!string.IsNullOrWhiteSpace(txtFieldFilter.Text))
-                filters.Add($"[Field Name] LIKE '%{txtFieldFilter.Text.Replace("'", "''")}%'");
+            if (!string.IsNullOrWhiteSpace(cmbFieldFilter.Text))
+                filters.Add($"[Field Name] LIKE '%{cmbFieldFilter.Text.Replace("'", "''")}%'");
             if (!string.IsNullOrWhiteSpace(txtExplanationFilter.Text))
                 filters.Add($"[Explanation] LIKE '%{txtExplanationFilter.Text.Replace("'", "''")}%'");
             _resultData.RowFilter = string.Join(" AND ", filters);
             lblMismatchSummary.Text = _lastSummary;
+            lblMismatchSummary.Visible = !string.IsNullOrEmpty(_lastSummary);
+        }
+
+        private void PopulateFieldFilterOptions()
+        {
+            cmbFieldFilter.Items.Clear();
+            if (_resultData == null || !_resultData.Table.Columns.Contains("Field Name"))
+                return;
+            var fields = _resultData.Table.AsEnumerable()
+                .Select(r => r["Field Name"].ToString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct()
+                .OrderBy(s => s)
+                .ToArray();
+            cmbFieldFilter.Items.AddRange(fields);
         }
 
         #endregion Button_Clicks
@@ -817,17 +838,26 @@ namespace Reconciliation
             {
                 ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets.Add("Sheet1");
 
+                int startRow = 1;
+                if (!string.IsNullOrEmpty(_lastSummary))
+                {
+                    worksheet.Cells[startRow, 1].Value = _lastSummary;
+                    worksheet.Cells[startRow, 1, startRow, dataTable.Columns.Count].Merge = true;
+                    worksheet.Cells[startRow, 1].Style.Font.Bold = true;
+                    startRow++;
+                }
+
                 // Add header row
-                AddHeaderRow(dataTable, worksheet);
+                AddHeaderRow(dataTable, worksheet, startRow);
 
                 if (rbExternal.Checked == true)
                 {
-                    AddDataRows(dataTable, worksheet);
-                    AddDataRowsWithColor(dataTable, worksheet);
+                    AddDataRows(dataTable, worksheet, startRow + 1);
+                    AddDataRowsWithColor(dataTable, worksheet, startRow + 1);
                 }
                 else
                 {
-                    AddDataRowsWithColor(dataTable, worksheet);
+                    AddDataRowsWithColor(dataTable, worksheet, startRow + 1);
                 }
 
                 // Save the Excel file
@@ -836,12 +866,12 @@ namespace Reconciliation
             }
         }
 
-        private void AddDataRowsWithColor(DataTable dataTable, ExcelWorksheet worksheet)
+        private void AddDataRowsWithColor(DataTable dataTable, ExcelWorksheet worksheet, int startRow)
         {
             // --- Style the Header Row ---
             for (int col = 0; col < dataTable.Columns.Count; col++)
             {
-                var headerCell = worksheet.Cells[1, col + 1];
+                var headerCell = worksheet.Cells[startRow, col + 1];
                 headerCell.Value = dataTable.Columns[col].ColumnName;
 
                 // Apply light blue background
@@ -868,7 +898,7 @@ namespace Reconciliation
             {
                 for (int col = 0; col < dataTable.Columns.Count; col++)
                 {
-                    var cell = worksheet.Cells[row + 2, col + 1]; // Data starts from row 2
+                    var cell = worksheet.Cells[startRow + 1 + row, col + 1];
                     cell.Value = dataTable.Rows[row][col];
 
                     string columnName = dataTable.Columns[col].ColumnName;
@@ -901,7 +931,7 @@ namespace Reconciliation
             }
         }
 
-        private void AddHeaderRow(DataTable dataTable, ExcelWorksheet worksheet)
+        private void AddHeaderRow(DataTable dataTable, ExcelWorksheet worksheet, int startRow)
         {
             int columnIndex = 1; // Start from first column
 
@@ -912,7 +942,7 @@ namespace Reconciliation
                     continue;
 
                 // Add header
-                worksheet.Cells[1, columnIndex].Value = column.ColumnName;
+                worksheet.Cells[startRow, columnIndex].Value = column.ColumnName;
                 columnIndex++;
             }
         }
@@ -925,9 +955,9 @@ namespace Reconciliation
         //        SetRowColorAndValues(rowRange, row, dataTable);
         //    }
         //}
-        private void AddDataRows(DataTable dataTable, ExcelWorksheet worksheet)
+        private void AddDataRows(DataTable dataTable, ExcelWorksheet worksheet, int startRow)
         {
-            int rowIndex = 2; // Start from the second row (assuming the first row is the header)
+            int rowIndex = startRow; // Start from given row
 
 
 
@@ -1296,6 +1326,10 @@ namespace Reconciliation
             lblMicrosoftfilenameTab4.Text = string.Empty;
             dgResultdata.DataSource = null;
             dgAzurePriceMismatch.DataSource = null;
+            dgResultdata.Visible = false;
+            lblMismatchSummary.Text = string.Empty;
+            lblMismatchSummary.Visible = false;
+            _lastSummary = string.Empty;
 
             _microsoftDataView = null;
             _sixDotOneDataView = null;
