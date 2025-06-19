@@ -89,7 +89,7 @@ using Reconciliation.Properties;
             dgvLogs = new DataGridView();
             lblLogsSummary = new Label();
             lblMismatchSummary = new Label();
-            txtFieldFilter = new TextBox();
+            cmbFieldFilter = new ComboBox();
             txtExplanationFilter = new TextBox();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
@@ -239,7 +239,7 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(lblExternal1DiscrepancyMsg);
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
             splitMain.Panel1.Controls.Add(lblMismatchSummary);
-            splitMain.Panel1.Controls.Add(txtFieldFilter);
+            splitMain.Panel1.Controls.Add(cmbFieldFilter);
             splitMain.Panel1.Controls.Add(txtExplanationFilter);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
@@ -466,19 +466,22 @@ using Reconciliation.Properties;
             lblMismatchSummary.TabIndex = 37;
             lblMismatchSummary.Text = "Summary";
             //
-            // txtFieldFilter
+            // cmbFieldFilter
             //
-            txtFieldFilter.Location = new Point(1200, 260);
-            txtFieldFilter.Name = "txtFieldFilter";
-            txtFieldFilter.PlaceholderText = "Filter Field";
-            txtFieldFilter.Size = new Size(150, 27);
-            txtFieldFilter.TabIndex = 38;
+            cmbFieldFilter.Location = new Point(1200, 260);
+            cmbFieldFilter.Name = "cmbFieldFilter";
+            cmbFieldFilter.PlaceholderText = "e.g., Product Code, Invoice Date";
+            cmbFieldFilter.Size = new Size(150, 27);
+            cmbFieldFilter.TabIndex = 38;
+            cmbFieldFilter.DropDownStyle = ComboBoxStyle.DropDown;
+            cmbFieldFilter.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbFieldFilter.AutoCompleteSource = AutoCompleteSource.ListItems;
             //
             // txtExplanationFilter
             //
             txtExplanationFilter.Location = new Point(1360, 260);
             txtExplanationFilter.Name = "txtExplanationFilter";
-            txtExplanationFilter.PlaceholderText = "Filter Explanation";
+            txtExplanationFilter.PlaceholderText = "e.g., mismatch, missing, date";
             txtExplanationFilter.Size = new Size(200, 27);
             txtExplanationFilter.TabIndex = 39;
             //
@@ -989,7 +992,7 @@ using Reconciliation.Properties;
         private DataGridView dgvLogs;
         private Label lblLogsSummary;
         private Label lblMismatchSummary;
-        private TextBox txtFieldFilter;
+        private ComboBox cmbFieldFilter;
         private TextBox txtExplanationFilter;
         private RichTextBox textLogs;
         private Button btnExportLogs;

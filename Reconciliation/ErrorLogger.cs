@@ -142,7 +142,7 @@ namespace Reconciliation
                     ts,
                     e.ErrorLevel,
                     e.RowNumber > 0 ? e.RowNumber.ToString() : "",
-                    Escape(e.ColumnName),
+                    Escape(FriendlyNameMap.Get(e.ColumnName)),
                     Escape(desc),
                     Escape(raw),
                     Escape(e.FileName),
