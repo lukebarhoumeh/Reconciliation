@@ -693,8 +693,12 @@ namespace Reconciliation
         private void PopulateFieldFilterOptions()
         {
             cmbFieldFilter.Items.Clear();
+            cmbFieldFilter.Items.Add("-- Select a Field --");
             if (_resultData == null || !_resultData.Table.Columns.Contains("Field Name"))
+            {
+                cmbFieldFilter.SelectedIndex = 0;
                 return;
+            }
             var fields = _resultData.Table.AsEnumerable()
                 .Select(r => r["Field Name"].ToString())
                 .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -702,6 +706,7 @@ namespace Reconciliation
                 .OrderBy(s => s)
                 .ToArray();
             cmbFieldFilter.Items.AddRange(fields);
+            cmbFieldFilter.SelectedIndex = 0;
         }
 
         #endregion Button_Clicks
