@@ -57,8 +57,8 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnImportSixDotOneFile, "Select the MSP Hub invoice CSV to reconcile");
             _toolTip.SetToolTip(btnCompare, "Run reconciliation using the loaded files");
             _toolTip.SetToolTip(btnExportToCsv, "Export reconciliation results to CSV");
-            _toolTip.SetToolTip(btnExportLogs, "Export Logs");
-            _toolTip.SetToolTip(btnResetLogs, "Reset Logs");
+            _toolTip.SetToolTip(btnExportLogs, "Export log to CSV");
+            _toolTip.SetToolTip(btnResetLogs, "Clear logs");
             _toolTip.SetToolTip(btnToggleFiles, "Hide/Show details");
             _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
@@ -482,6 +482,7 @@ namespace Reconciliation
         private void btnResetLogs_Click(object sender, EventArgs e)
         {
             textLogs.Clear();
+            UpdateLogSummary();
         }
         private void btnPriceMismatchingExportToCsv_Click(object sender, EventArgs e)
         {
@@ -1158,6 +1159,7 @@ namespace Reconciliation
             }
 
             dgvLogs.DataSource = table;
+            UpdateLogSummary();
         }
 
         private void FlashLogsTab()
@@ -1165,6 +1167,38 @@ namespace Reconciliation
             tabPage2.ForeColor = Color.Red;
             _flashTimer.Stop();
             _flashTimer.Start();
+        }
+
+        private void UpdateLogSummary()
+        {
+            int errorCount = dgvLogs.Rows.Cast<DataGridViewRow>()
+                .Count(r => r.Cells["Level"].Value?.ToString() == "Error");
+            int warningCount = dgvLogs.Rows.Cast<DataGridViewRow>()
+                .Count(r => r.Cells["Level"].Value?.ToString() == "Warning");
+            lblLogsSummary.Text = $"⚠ {warningCount} Warnings,  {errorCount} Errors";
+            if (errorCount > 0)
+                lblLogsSummary.ForeColor = Color.Red;
+            else if (warningCount > 0)
+                lblLogsSummary.ForeColor = Color.Orange;
+            else
+                lblLogsSummary.ForeColor = Color.Green;
+        }
+
+        private void dgvLogs_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            foreach (DataGridViewRow row in dgvLogs.Rows)
+            {
+                if (row.Cells["Level"].Value is string level)
+                {
+                    if (level == "Error")
+                        row.DefaultCellStyle.BackColor = Color.Red;
+                    else if (level == "Warning")
+                        row.DefaultCellStyle.BackColor = Color.Orange;
+                    else if (level == "Info")
+                        row.DefaultCellStyle.BackColor = Color.LightGray;
+                }
+            }
+            UpdateLogSummary();
         }
         // Helper method to safely convert to decimal
         private decimal SafeConvertToDecimal(object value)
