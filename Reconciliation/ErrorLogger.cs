@@ -13,6 +13,7 @@ namespace Reconciliation
     public static class ErrorLogger
     {
         private static readonly List<ErrorLogEntry> _entries = new();
+        private static readonly List<ErrorLogEntry> _allEntries = new();
         private static readonly Dictionary<string, int> _errorCounts = new();
         private static readonly Dictionary<string, int> _warningCounts = new();
         private static readonly Dictionary<string, int> _detailCounts = new();
@@ -26,6 +27,7 @@ namespace Reconciliation
         public static int MaxDetailedRows { get; set; } = 5;
 
         public static IReadOnlyList<ErrorLogEntry> Entries => _entries.AsReadOnly();
+        public static IReadOnlyList<ErrorLogEntry> AllEntries => _allEntries.AsReadOnly();
         public static IReadOnlyDictionary<string, int> ErrorSummary => _errorCounts;
         public static IReadOnlyDictionary<string, int> WarningSummary => _warningCounts;
 
@@ -55,6 +57,10 @@ namespace Reconciliation
         {
             rawValue = string.IsNullOrWhiteSpace(rawValue) ? string.Empty : rawValue;
             var entry = new ErrorLogEntry(DateTime.Now, level, row, column, description, rawValue, fileName, context);
+            lock (_allEntries)
+            {
+                _allEntries.Add(entry);
+            }
             string key = $"{level}|{column}|{description}";
             int count;
             lock (_detailCounts)
@@ -108,6 +114,7 @@ namespace Reconciliation
             lock (_entries)
             {
                 _entries.Clear();
+                _allEntries.Clear();
                 _errorCounts.Clear();
                 _warningCounts.Clear();
                 _detailCounts.Clear();
@@ -121,29 +128,26 @@ namespace Reconciliation
             {
                 "Timestamp,ErrorLevel,RowNumber,ColumnName,Description,RawValue,FileName,Context"
             };
-            int err;
-            int warn;
-            lock (_entries)
+            List<ErrorLogEntry> snapshot;
+            lock (_allEntries)
             {
-                foreach (var e in _entries)
-                {
-                    var ts = e.IsSummary ? "Summary" : e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
-                    string desc = FormatNumeric(e.Description, e.ColumnName);
-                    string raw = FormatNumeric(e.RawValue, e.ColumnName);
-                    lines.Add(string.Join(',',
-                        ts,
-                        e.ErrorLevel,
-                        e.RowNumber > 0 ? e.RowNumber.ToString() : "-",
-                        Escape(e.ColumnName),
-                        Escape(desc),
-                        Escape(raw),
-                        Escape(e.FileName),
-                        Escape(e.Context)));
-                }
-                err = _entries.Count(x => x.ErrorLevel == "Error");
-                warn = _entries.Count(x => x.ErrorLevel == "Warning");
+                snapshot = _allEntries.ToList();
             }
-            lines.Add(string.Join(',', new string[8]) + $",Total Errors: {err}, Total Warnings: {warn}");
+            foreach (var e in snapshot)
+            {
+                var ts = e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+                string desc = FormatNumeric(e.Description, e.ColumnName);
+                string raw = FormatNumeric(e.RawValue, e.ColumnName);
+                lines.Add(string.Join(',',
+                    ts,
+                    e.ErrorLevel,
+                    e.RowNumber > 0 ? e.RowNumber.ToString() : "",
+                    Escape(e.ColumnName),
+                    Escape(desc),
+                    Escape(raw),
+                    Escape(e.FileName),
+                    Escape(e.Context)));
+            }
             File.WriteAllLines(filePath, lines);
         }
 

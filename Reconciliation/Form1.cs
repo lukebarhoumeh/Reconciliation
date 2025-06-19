@@ -458,19 +458,18 @@ namespace Reconciliation
             {
                 // Format current date and time
                 string dateTimeNow = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string defaultFileName = $"Logs_{dateTimeNow}.txt";
+                string defaultFileName = $"Logs_{dateTimeNow}.csv";
                 var saveFileDialog = new SaveFileDialog
                 {
-                    Filter = "Text File | *.txt",
-                    Title = "Save Text File",
+                    Filter = "CSV File | *.csv",
+                    Title = "Save CSV File",
                     FileName = defaultFileName // Set default file name with date and time
                 };
 
-                if (string.IsNullOrEmpty(textLogs.Text)) return;
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = saveFileDialog.FileName;
-                    ExportLogToText(filePath);
+                    ErrorLogger.Export(filePath);
                     MessageBox.Show("The Log file has been successfully exported.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -1092,18 +1091,6 @@ namespace Reconciliation
             }
             throw new Exception("No network adapters with an IPv4 address in the system!");
         }
-        private void ExportLogToText(string filePath)
-        {
-            try
-            {
-                File.WriteAllText(filePath, textLogs.Text);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error writing to file: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         #endregion Export_ToFile
 
         #region Compare_Logic
@@ -1122,13 +1109,20 @@ namespace Reconciliation
         }
         private void AppendLog(string message)
         {
+            void Append()
+            {
+                textLogs.AppendText(message);
+                textLogs.SelectionStart = textLogs.TextLength;
+                textLogs.ScrollToCaret();
+            }
+
             if (textLogs.InvokeRequired)
             {
-                textLogs.Invoke(new Action(() => textLogs.AppendText(message)));
+                textLogs.Invoke(new Action(Append));
             }
             else
             {
-                textLogs.AppendText(message);
+                Append();
             }
         }
 
@@ -1144,7 +1138,7 @@ namespace Reconciliation
             table.Columns.Add("File");
             table.Columns.Add("Context");
 
-            foreach (var e in ErrorLogger.Entries)
+            foreach (var e in ErrorLogger.AllEntries)
             {
                 var r = table.NewRow();
                 r[0] = e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
