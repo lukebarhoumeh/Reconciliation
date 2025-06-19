@@ -8,6 +8,8 @@ namespace Reconciliation
     /// </summary>
     public class ReconciliationService
     {
+        public string LastSummary { get; private set; } = string.Empty;
+
         /// <summary>Returns rows where any column value differs.</summary>
         public DataTable CompareInvoices(DataTable sixDotOne, DataTable microsoft)
         {
@@ -16,6 +18,7 @@ namespace Reconciliation
 
             var detector = new DiscrepancyDetector();
             detector.Compare(sixDotOne, microsoft);
+            LastSummary = string.Join(", ", detector.Summary.Select(kv => $"{kv.Value} {kv.Key}"));
             var table = detector.GetMismatches();
             if (!table.Columns.Contains("Reason"))
                 table.Columns.Add("Reason", typeof(string));

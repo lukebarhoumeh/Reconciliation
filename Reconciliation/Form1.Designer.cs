@@ -88,6 +88,9 @@ using Reconciliation.Properties;
             btnExportLogs = new Button();
             dgvLogs = new DataGridView();
             lblLogsSummary = new Label();
+            lblMismatchSummary = new Label();
+            txtFieldFilter = new TextBox();
+            txtExplanationFilter = new TextBox();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             panel1.SuspendLayout();
@@ -235,6 +238,9 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(lblDiscrepancyTitle);
             splitMain.Panel1.Controls.Add(lblExternal1DiscrepancyMsg);
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
+            splitMain.Panel1.Controls.Add(lblMismatchSummary);
+            splitMain.Panel1.Controls.Add(txtFieldFilter);
+            splitMain.Panel1.Controls.Add(txtExplanationFilter);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileName);
@@ -449,7 +455,33 @@ using Reconciliation.Properties;
             lblEmptyMessage.TabIndex = 29;
             lblEmptyMessage.Text = "lblEmptyMessage";
             lblEmptyMessage.Visible = false;
-            // 
+            //
+            // lblMismatchSummary
+            //
+            lblMismatchSummary.AutoSize = true;
+            lblMismatchSummary.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point);
+            lblMismatchSummary.Location = new Point(3, 260);
+            lblMismatchSummary.Name = "lblMismatchSummary";
+            lblMismatchSummary.Size = new Size(82, 23);
+            lblMismatchSummary.TabIndex = 37;
+            lblMismatchSummary.Text = "Summary";
+            //
+            // txtFieldFilter
+            //
+            txtFieldFilter.Location = new Point(1200, 260);
+            txtFieldFilter.Name = "txtFieldFilter";
+            txtFieldFilter.PlaceholderText = "Filter Field";
+            txtFieldFilter.Size = new Size(150, 27);
+            txtFieldFilter.TabIndex = 38;
+            //
+            // txtExplanationFilter
+            //
+            txtExplanationFilter.Location = new Point(1360, 260);
+            txtExplanationFilter.Name = "txtExplanationFilter";
+            txtExplanationFilter.PlaceholderText = "Filter Explanation";
+            txtExplanationFilter.Size = new Size(200, 27);
+            txtExplanationFilter.TabIndex = 39;
+            //
             // dgResultdata
             // 
             dgResultdata.AllowUserToAddRows = false;
@@ -956,6 +988,9 @@ using Reconciliation.Properties;
         private Label lblInternal2DiscrepancyMsg;
         private DataGridView dgvLogs;
         private Label lblLogsSummary;
+        private Label lblMismatchSummary;
+        private TextBox txtFieldFilter;
+        private TextBox txtExplanationFilter;
         private RichTextBox textLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;
