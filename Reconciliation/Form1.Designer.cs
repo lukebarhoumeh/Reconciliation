@@ -34,6 +34,8 @@ using Reconciliation.Properties;
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
             splitMain = new SplitContainer();
             btnToggleFiles = new Button();
             panel1 = new Panel();
@@ -85,6 +87,7 @@ using Reconciliation.Properties;
             btnResetLogs = new Button();
             btnExportLogs = new Button();
             dgvLogs = new DataGridView();
+            lblLogsSummary = new Label();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             panel1.SuspendLayout();
@@ -772,8 +775,10 @@ using Reconciliation.Properties;
             // 
             // tabPage2
             // 
+            tabPage2.BackColor = SystemColors.Window;
             tabPage2.Controls.Add(btnResetLogs);
             tabPage2.Controls.Add(btnExportLogs);
+            tabPage2.Controls.Add(lblLogsSummary);
             tabPage2.Controls.Add(dgvLogs);
             tabPage2.Controls.Add(textLogs);
             tabPage2.Location = new Point(4, 59);
@@ -782,7 +787,7 @@ using Reconciliation.Properties;
             tabPage2.Size = new Size(1929, 1323);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "Logs";
-            tabPage2.UseVisualStyleBackColor = true;
+            tabPage2.UseVisualStyleBackColor = false;
             // 
             // btnResetLogs
             // 
@@ -796,11 +801,13 @@ using Reconciliation.Properties;
             btnResetLogs.ImageAlign = ContentAlignment.MiddleLeft;
             btnResetLogs.Location = new Point(959, -38);
             btnResetLogs.Name = "btnResetLogs";
-            btnResetLogs.Padding = new Padding(12, 5, 12, 5);
+            btnResetLogs.Margin = new Padding(8, 0, 0, 0);
+            btnResetLogs.Padding = new Padding(8, 0, 8, 0);
             btnResetLogs.Size = new Size(90, 40);
             btnResetLogs.TabIndex = 34;
             btnResetLogs.ForeColor = Color.White;
             btnResetLogs.Text = "Reset";
+            btnResetLogs.TextAlign = ContentAlignment.MiddleCenter;
             btnResetLogs.UseVisualStyleBackColor = false;
             btnResetLogs.Click += btnResetLogs_Click;
             // 
@@ -817,24 +824,45 @@ using Reconciliation.Properties;
             btnExportLogs.ImageAlign = ContentAlignment.MiddleLeft;
             btnExportLogs.Location = new Point(1113, -38);
             btnExportLogs.Name = "btnExportLogs";
-            btnExportLogs.Padding = new Padding(12, 5, 12, 5);
+            btnExportLogs.Margin = new Padding(8, 0, 0, 0);
+            btnExportLogs.Padding = new Padding(8, 0, 8, 0);
             btnExportLogs.Size = new Size(90, 40);
             btnExportLogs.TabIndex = 33;
             btnExportLogs.ForeColor = Color.White;
             btnExportLogs.Text = "Export";
-            btnExportLogs.TextAlign = ContentAlignment.MiddleRight;
+            btnExportLogs.TextAlign = ContentAlignment.MiddleCenter;
             btnExportLogs.UseVisualStyleBackColor = false;
             btnExportLogs.Click += btnExportLogs_Click;
+            //
+            // lblLogsSummary
+            //
+            lblLogsSummary.AutoSize = true;
+            lblLogsSummary.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            lblLogsSummary.Location = new Point(3, 6);
+            lblLogsSummary.Name = "lblLogsSummary";
+            lblLogsSummary.Size = new Size(167, 20);
+            lblLogsSummary.TabIndex = 36;
+            lblLogsSummary.Text = "⚠ 0 Warnings, 0 Errors";
             //
             // dgvLogs
             //
             dgvLogs.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            dgvLogs.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgvLogs.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvLogs.BackgroundColor = SystemColors.Window;
+            dgvLogs.BorderStyle = BorderStyle.None;
             dgvLogs.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvLogs.Location = new Point(3, 6);
+            dgvLogs.EnableHeadersVisualStyles = false;
+            dataGridViewCellStyle5.BackColor = Color.FromArgb(32, 93, 170);
+            dataGridViewCellStyle5.ForeColor = Color.White;
+            dataGridViewCellStyle5.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold, GraphicsUnit.Point);
+            dgvLogs.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle6.BackColor = Color.FromArgb(245, 249, 255);
+            dgvLogs.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle6;
+            dgvLogs.Location = new Point(3, 32);
             dgvLogs.Name = "dgvLogs";
             dgvLogs.ReadOnly = true;
             dgvLogs.RowHeadersVisible = false;
+            dgvLogs.DataBindingComplete += dgvLogs_DataBindingComplete;
             dgvLogs.Size = new Size(1923, 530);
             dgvLogs.TabIndex = 35;
             //
@@ -926,6 +954,7 @@ using Reconciliation.Properties;
         private Label lblExternal2DiscrepancyMsg;
         private Label lblInternal2DiscrepancyMsg;
         private DataGridView dgvLogs;
+        private Label lblLogsSummary;
         private RichTextBox textLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;
