@@ -86,6 +86,8 @@ namespace Reconciliation
                 tbcMenu.TabPages.Remove(tabPage3);
             }
 
+            DisableFilters();
+
             _flashTimer.Interval = 5000;
             _flashTimer.Tick += (s, e) =>
             {
@@ -353,7 +355,6 @@ namespace Reconciliation
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
                         PopulateFieldFilterOptions();
-                        PopulateFieldFilterOptions();
 
                         if (dgResultdata.Rows.Count == 0)
                         {
@@ -402,6 +403,7 @@ namespace Reconciliation
                             lblEmptyMessage.Visible = false;
                         }
                         dgResultdata.Visible = true;
+                        PopulateFieldFilterOptions();
 
                         // Attach the event handler for cell formatting
                         dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
@@ -681,8 +683,8 @@ namespace Reconciliation
         {
             if (_resultData == null) return;
             var filters = new List<string>();
-            if (!string.IsNullOrWhiteSpace(cmbFieldFilter.Text))
-                filters.Add($"[Field Name] LIKE '%{cmbFieldFilter.Text.Replace("'", "''")}%'");
+            if (cmbFieldFilter.SelectedIndex > 0)
+                filters.Add($"[Field Name] = '{cmbFieldFilter.SelectedItem.ToString().Replace("'", "''")}'");
             if (!string.IsNullOrWhiteSpace(txtExplanationFilter.Text))
                 filters.Add($"[Explanation] LIKE '%{txtExplanationFilter.Text.Replace("'", "''")}%'");
             _resultData.RowFilter = string.Join(" AND ", filters);
@@ -693,12 +695,19 @@ namespace Reconciliation
         private void PopulateFieldFilterOptions()
         {
             cmbFieldFilter.Items.Clear();
-            cmbFieldFilter.Items.Add("-- Select a Field --");
-            if (_resultData == null || !_resultData.Table.Columns.Contains("Field Name"))
+            txtExplanationFilter.Text = string.Empty;
+
+            if (_resultData == null || !_resultData.Table.Columns.Contains("Field Name") || _resultData.Count == 0)
             {
+                cmbFieldFilter.Items.Add("-- No fields available --");
                 cmbFieldFilter.SelectedIndex = 0;
+                cmbFieldFilter.Enabled = false;
+                txtExplanationFilter.Enabled = false;
                 return;
             }
+
+            _resultData.Table.CaseSensitive = false;
+            cmbFieldFilter.Items.Add("-- Select a Field --");
             var fields = _resultData.Table.AsEnumerable()
                 .Select(r => r["Field Name"].ToString())
                 .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -707,6 +716,18 @@ namespace Reconciliation
                 .ToArray();
             cmbFieldFilter.Items.AddRange(fields);
             cmbFieldFilter.SelectedIndex = 0;
+            cmbFieldFilter.Enabled = true;
+            txtExplanationFilter.Enabled = true;
+        }
+
+        private void DisableFilters()
+        {
+            cmbFieldFilter.Items.Clear();
+            cmbFieldFilter.Items.Add("-- No fields available --");
+            cmbFieldFilter.SelectedIndex = 0;
+            cmbFieldFilter.Enabled = false;
+            txtExplanationFilter.Text = string.Empty;
+            txtExplanationFilter.Enabled = false;
         }
 
         #endregion Button_Clicks
@@ -1350,6 +1371,8 @@ namespace Reconciliation
                 btnCompare.Text = "Reconcile";
             else
                 btnCompare.Text = "Validate";
+
+            DisableFilters();
         }
 
         #endregion Helpers
