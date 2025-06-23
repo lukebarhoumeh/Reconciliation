@@ -1,0 +1,2 @@
+PartnerId,CustomerId,CustomerName,CustomerDomainName,CustomerCountry,PartnerInvoiceNumber,OrderNumber,OrderDate,ProductId,PartNumber,SkuName,ProductName,ChargeType,PartnerUnitPrice,Quantity,PartnerSubTotal,PartnerTaxTotal,PartnerTotal,PricingCurrency,SubscriptionId,ChargeStartDate,ChargeEndDate,Term,BillingCycle,PartnerEffectiveUnitPrice,ExtraColumn
+P1,C1,Client,client.com,US,INV1,ORD1,2024-01-01,Prod1,PN-1,Name1,ProdName,Usage,5,2,10,1,11,USD,SUB1,2024-01-01,2024-01-31,Monthly,Monthly,4.5,SHOULD_DROP

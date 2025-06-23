@@ -30,7 +30,21 @@ namespace Reconciliation.Tests
             DataRow row = view.Table.Rows[0];
             Assert.Equal("2", row["SkuId"]);
             Assert.True(view.Table.Columns.Contains("BillingCycle"));
-            Assert.False(view.Table.Columns.Contains("BillingFrequency"));
+            Assert.True(view.Table.Columns.Contains("BillingFrequency"));
+        }
+
+        [Fact]
+        public void ImportSixDotOneInvoice_MapsColumns()
+        {
+            var path = Path.Combine("TestData", "msphub_raw.csv");
+            var service = new FileImportService();
+            ErrorLogger.Clear();
+            var view = service.ImportSixDotOneInvoice(path);
+            Assert.Single(view);
+            DataRow row = view.Table.Rows[0];
+            Assert.Equal("PN-1", row["SkuId"]); // PartNumber preferred over SkuName
+            Assert.Equal("INV1", row["InvoiceNumber"]);
+            Assert.False(view.Table.Columns.Contains("ExtraColumn"));
         }
 
     }
