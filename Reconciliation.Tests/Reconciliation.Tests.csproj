@@ -28,10 +28,8 @@
     <Compile Include="../Reconciliation/AppConfig.cs" Link="AppConfig.cs" />
     <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
     <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
-    <Compile Include="../Reconciliation/FuzzyMatcher.cs" Link="FuzzyMatcher.cs" />
     <Compile Include="../Reconciliation/DiscrepancyDetector.cs" Link="DiscrepancyDetector.cs" />
     <Compile Include="../Reconciliation/DataQualityValidator.cs" Link="DataQualityValidator.cs" />
-    <Compile Include="../Reconciliation/DataTableExtensions.cs" Link="DataTableExtensions.cs" />
     <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
     <Compile Include="../Reconciliation/ReconciliationService.cs" Link="ReconciliationService.cs" />
     <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />

@@ -9,7 +9,6 @@ namespace Reconciliation
     /// </summary>
     public class FileImportService
     {
-        private readonly bool _allowFuzzyColumns;
         private readonly string[] _uniqueKeyColumns =
         {
             "CustomerDomainName", "ProductId", "SkuId", "ChargeType", "Term", "BillingCycle"
@@ -23,9 +22,8 @@ namespace Reconciliation
             "InternalReferenceId", "SkuId", "BillingCycle"
         };
 
-        public FileImportService(bool allowFuzzyColumns)
+        public FileImportService()
         {
-            _allowFuzzyColumns = allowFuzzyColumns;
         }
 
         /// <summary>
@@ -43,7 +41,7 @@ namespace Reconciliation
                 throw new ArgumentException("The selected file contains no rows.");
             }
             DataQualityValidator.Run(dataView.Table, fileInfo.Name);
-            SchemaValidator.RequireColumns(dataView.Table, "Microsoft invoice", _requiredMicrosoftColumns, _allowFuzzyColumns);
+            SchemaValidator.RequireColumns(dataView.Table, "Microsoft invoice", _requiredMicrosoftColumns);
 
             for (int i = dataView.Count - 1; i >= 0; i--)
             {
@@ -78,12 +76,7 @@ namespace Reconciliation
                 throw new ArgumentException("The selected file contains no rows.");
             }
             DataQualityValidator.Run(dataView.Table, fileInfo.Name);
-            if (_allowFuzzyColumns)
-            {
-                foreach (var col in _requiredMspHubColumns)
-                    dataView.Table.TryFuzzyRenameColumn(col);
-            }
-            SchemaValidator.RequireColumns(dataView.Table, "MSP Hub invoice", _requiredMspHubColumns, _allowFuzzyColumns);
+            SchemaValidator.RequireColumns(dataView.Table, "MSP Hub invoice", _requiredMspHubColumns);
 
             if (dataView.Table.Columns.Contains("SkuId"))
             {

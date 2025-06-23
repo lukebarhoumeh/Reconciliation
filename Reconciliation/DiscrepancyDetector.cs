@@ -20,8 +20,6 @@ namespace Reconciliation
         /// <summary>Maximum allowed days between two dates to be considered equal.</summary>
         public TimeSpan DateTolerance { get; set; } = TimeSpan.FromDays(AppConfig.Validation.DateToleranceDays);
 
-        /// <summary>Maximum Levenshtein distance for textual fields.</summary>
-        public int TextDistance { get; set; } = AppConfig.Validation.TextDistance;
 
         private readonly List<Discrepancy> _discrepancies = new();
         private readonly Dictionary<string, int> _summary = new();
@@ -93,7 +91,7 @@ namespace Reconciliation
             {
                 return Math.Abs((ta - tb).TotalDays) <= DateTolerance.TotalDays;
             }
-            return FuzzyMatcher.IsFuzzyMatch(a, b, TextDistance);
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
 
         private string ExplainDifference(string a, string b, string column)
