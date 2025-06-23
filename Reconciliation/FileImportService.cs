@@ -22,6 +22,20 @@ namespace Reconciliation
             "InternalReferenceId", "SkuId", "BillingCycle"
         };
 
+        // Canonical Microsoft column order used for partner imports
+        private static readonly string[] _microsoftColumns =
+        {
+            "PartnerId","CustomerId","CustomerName","CustomerDomainName","CustomerCountry",
+            "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ProductId","SkuId",
+            "AvailabilityId","SkuName","ProductName","ChargeType","UnitPrice","Quantity",
+            "Subtotal","TaxTotal","Total","Currency","PriceAdjustmentDescription",
+            "PublisherName","PublisherId","SubscriptionDescription","SubscriptionId",
+            "ChargeStartDate","ChargeEndDate","TermAndBillingCycle","EffectiveUnitPrice",
+            "UnitType","AlternateId","BillableQuantity","BillingFrequency","PricingCurrency",
+            // Additional split columns used as comparison keys
+            "Term","BillingCycle"
+        };
+
         public FileImportService()
         {
         }
@@ -75,43 +89,121 @@ namespace Reconciliation
                 ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
                 throw new ArgumentException("The selected file contains no rows.");
             }
-            DataQualityValidator.Run(dataView.Table, fileInfo.Name);
-            SchemaValidator.RequireColumns(dataView.Table, "MSP Hub invoice", _requiredMspHubColumns);
 
-            if (dataView.Table.Columns.Contains("SkuId"))
+            // Map all columns to Microsoft equivalents before any validation
+            var mapped = MapMspHubColumns(dataView.Table);
+            DataQualityValidator.Run(mapped, fileInfo.Name);
+            SchemaValidator.RequireColumns(mapped, "MSP Hub invoice", _requiredMicrosoftColumns);
+
+            var view = mapped.DefaultView;
+
+            if (view.Table.Columns.Contains("SkuId"))
             {
-                foreach (DataRowView rowView in dataView)
+                foreach (DataRowView rowView in view)
                 {
                     string skuId = SafeGetString(rowView.Row, "SkuId");
                     rowView["SkuId"] = skuId.TrimStart('0');
                 }
             }
 
-            if (dataView.Table.Columns.Contains("BillingFrequency"))
-                dataView.Table.Columns["BillingFrequency"].ColumnName = "BillingCycle";
-            if (dataView.Table.Columns.Contains("ResourceName"))
-                dataView.Table.Columns["ResourceName"].ColumnName = "ProductName";
+            if (view.Table.Columns.Contains("ResourceName"))
+                view.Table.Columns["ResourceName"].ColumnName = "ProductName";
 
-            for (int i = dataView.Count - 1; i >= 0; i--)
+            for (int i = view.Count - 1; i >= 0; i--)
             {
-                var row = dataView[i].Row;
+                var row = view[i].Row;
                 if (SafeGetString(row, "ProductName") == "Azure plan")
                 {
-                    dataView.Delete(i);
+                    view.Delete(i);
                 }
             }
 
-            if (dataView.Table.Columns.Contains("ValidFrom"))
-                dataView.Table.Columns["ValidFrom"].ColumnName = "ChargeStartDate";
-            if (dataView.Table.Columns.Contains("ValidTo"))
-                dataView.Table.Columns["ValidTo"].ColumnName = "ChargeEndDate";
-            if (dataView.Table.Columns.Contains("PurchaseDate"))
-                dataView.Table.Columns["PurchaseDate"].ColumnName = "OrderDate";
-            if (dataView.Table.Columns.Contains("PartnerTotal"))
-                dataView.Table.Columns["PartnerTotal"].ColumnName = "Total";
+            if (view.Table.Columns.Contains("ValidFrom"))
+                view.Table.Columns["ValidFrom"].ColumnName = "ChargeStartDate";
+            if (view.Table.Columns.Contains("ValidTo"))
+                view.Table.Columns["ValidTo"].ColumnName = "ChargeEndDate";
+            if (view.Table.Columns.Contains("PurchaseDate"))
+                view.Table.Columns["PurchaseDate"].ColumnName = "OrderDate";
+            if (view.Table.Columns.Contains("PartnerTotal"))
+                view.Table.Columns["PartnerTotal"].ColumnName = "Total";
 
-            dataView = ReorderColumns(dataView.Table, _uniqueKeyColumns);
-            return dataView;
+            view = ReorderColumns(view.Table, _uniqueKeyColumns);
+            return view;
+        }
+
+        /// <summary>
+        /// Map MSP Hub columns to the Microsoft invoice schema.
+        /// Extra columns are discarded and missing ones are added empty so the
+        /// returned table exactly matches the Microsoft column order.
+        /// </summary>
+        private static DataTable MapMspHubColumns(DataTable table)
+        {
+            DataTable mapped = new();
+            foreach (string col in _microsoftColumns)
+                mapped.Columns.Add(col, typeof(string));
+
+            foreach (DataRow row in table.Rows)
+            {
+                DataRow newRow = mapped.NewRow();
+                foreach (string col in _microsoftColumns)
+                {
+                    newRow[col] = col switch
+                    {
+                        "PartnerId" => SafeGetString(row, "PartnerId"),
+                        "CustomerId" => SafeGetString(row, "CustomerId"),
+                        "CustomerName" => SafeGetString(row, "CustomerName"),
+                        "CustomerDomainName" => SafeGetString(row, "CustomerDomainName"),
+                        "CustomerCountry" => SafeGetString(row, "CustomerCountry"),
+                        "InvoiceNumber" => SafeGetString(row, "PartnerInvoiceNumber"),
+                        "MpnId" => string.Empty,
+                        "Tier2MpnId" => string.Empty,
+                        "OrderId" => SafeGetString(row, "OrderNumber"),
+                        "OrderDate" => SafeGetString(row, "OrderDate"),
+                        "ProductId" => SafeGetString(row, "ProductId"),
+                        "SkuId" => !string.IsNullOrEmpty(SafeGetString(row, "PartNumber"))
+                                        ? SafeGetString(row, "PartNumber")
+                                        : !string.IsNullOrEmpty(SafeGetString(row, "SkuId"))
+                                            ? SafeGetString(row, "SkuId")
+                                            : SafeGetString(row, "SkuName"),
+                        "AvailabilityId" => string.Empty,
+                        "SkuName" => SafeGetString(row, "SkuName"),
+                        "ProductName" =>
+                            !string.IsNullOrEmpty(SafeGetString(row, "ProductName"))
+                                ? SafeGetString(row, "ProductName")
+                                : SafeGetString(row, "ResourceName"),
+                        "ChargeType" => SafeGetString(row, "ChargeType"),
+                        "UnitPrice" => SafeGetString(row, "PartnerUnitPrice"),
+                        "Quantity" => SafeGetString(row, "Quantity"),
+                        "Subtotal" => SafeGetString(row, "PartnerSubTotal"),
+                        "TaxTotal" => SafeGetString(row, "PartnerTaxTotal"),
+                        "Total" => SafeGetString(row, "PartnerTotal"),
+                        "Currency" => SafeGetString(row, "PricingCurrency"),
+                        "PriceAdjustmentDescription" => string.Empty,
+                        "PublisherName" => string.Empty,
+                        "PublisherId" => string.Empty,
+                        "SubscriptionDescription" => string.Empty,
+                        "SubscriptionId" => SafeGetString(row, "SubscriptionId"),
+                        "ChargeStartDate" => SafeGetString(row, "ChargeStartDate"),
+                        "ChargeEndDate" => SafeGetString(row, "ChargeEndDate"),
+                        "TermAndBillingCycle" =>
+                            string.IsNullOrEmpty(SafeGetString(row, "BillingCycle"))
+                                ? SafeGetString(row, "Term")
+                                : $"{SafeGetString(row, "Term")} {SafeGetString(row, "BillingCycle")}",
+                        "EffectiveUnitPrice" => SafeGetString(row, "PartnerEffectiveUnitPrice"),
+                        "UnitType" => string.Empty,
+                        "AlternateId" => string.Empty,
+                        "BillableQuantity" => string.Empty,
+                        "BillingFrequency" => SafeGetString(row, "BillingCycle"),
+                        "PricingCurrency" => SafeGetString(row, "PricingCurrency"),
+                        "Term" => SafeGetString(row, "Term"),
+                        "BillingCycle" => SafeGetString(row, "BillingCycle"),
+                        _ => string.Empty
+                    };
+                }
+                mapped.Rows.Add(newRow);
+            }
+
+            return mapped;
         }
 
         private static DataView ReorderColumns(DataTable table, string[] columnOrder)
