@@ -22,6 +22,15 @@ namespace Reconciliation
             "BillingCycle"
         };
 
+        private readonly string[] _aggregateColumns = new[]
+        {
+            "CustomerDomainName",
+            "ProductId",
+            "SkuId",
+            "Term",
+            "BillingCycle"
+        };
+
         /// <summary>
         /// Returns rows where total price differs between MSP Hub and Microsoft invoices.
         /// </summary>
@@ -43,9 +52,9 @@ namespace Reconciliation
             result.Columns.Add("PriceDifference", typeof(decimal));
 
             var groupedHub = filteredHub.AsEnumerable()
-                .GroupBy(row => string.Join("|", _keyColumns.Select(c => row[c])));
+                .GroupBy(row => string.Join("|", _aggregateColumns.Select(c => row[c])));
             var groupedMs = filteredMs.AsEnumerable()
-                .GroupBy(row => string.Join("|", _keyColumns.Select(c => row[c])));
+                .GroupBy(row => string.Join("|", _aggregateColumns.Select(c => row[c])));
 
             foreach (var hubGroup in groupedHub)
             {
@@ -60,11 +69,12 @@ namespace Reconciliation
 
                 DataRow row = result.NewRow();
                 var keys = hubGroup.Key.Split('|');
-                for (int i = 0; i < _keyColumns.Length; i++)
-                    row[_keyColumns[i]] = keys[i];
+                for (int i = 0; i < _aggregateColumns.Length; i++)
+                    row[_aggregateColumns[i]] = keys[i];
+                row["ChargeType"] = string.Join(", ", hubGroup.Select(r => r["ChargeType"]).Distinct());
                 foreach (DataColumn col in filteredHub.Columns)
                 {
-                    if (_keyColumns.Contains(col.ColumnName) || col.ColumnName == "Quantity")
+                    if (_aggregateColumns.Contains(col.ColumnName) || col.ColumnName == "ChargeType" || col.ColumnName == "Quantity")
                         continue;
                     row[col.ColumnName] = hubGroup.First()[col];
                 }
