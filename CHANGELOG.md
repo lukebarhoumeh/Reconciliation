@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Credit and debit rows with the same customer and SKU are now netted before
+  calculating price mismatches.
 - Removed ComboBox.PlaceholderText usage and added a selectable "-- Select a Field --" option for compatibility with older WinForms versions.
 - Accountant-friendly reconciliation outputs with mapped field names, grouped summaries and suggested actions.
 - Filter dropdown and tooltips guide accountants; summaries clear on mode switch and exports include top-level summary row.

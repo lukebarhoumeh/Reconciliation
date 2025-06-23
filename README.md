@@ -35,7 +35,8 @@ can be unit tested without the WinForms UI. Use
 `CompareInvoices(msphub, microsoft)` to get a table of discrepancies.
 
 `PriceMismatchService` detects unit price differences between the two invoices
-and can export the mismatches to Excel.
+and can export the mismatches to Excel. Credit lines followed by a matching
+debit are aggregated so prorated adjustments cancel out before comparison.
 
 Example summary output:
 
