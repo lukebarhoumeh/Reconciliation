@@ -44,10 +44,10 @@ namespace Reconciliation.Tests
             var svc = new ReconciliationService();
             var result = svc.CompareInvoices(hub, ms);
 
-            Assert.Equal(3, result.Rows.Count);
-            var cols = result.Rows.Cast<DataRow>().Select(r => r["Column"].ToString());
+            Assert.Equal(5, result.Rows.Count);
+            var cols = result.Rows.Cast<DataRow>().Select(r => r["Field Name"].ToString());
             Assert.Contains("CustomerName", cols);
-            Assert.Contains("CustomerDomainName", cols);
+            Assert.Contains("Customer Website", cols);
             Assert.Contains("ProductName", cols);
         }
 
