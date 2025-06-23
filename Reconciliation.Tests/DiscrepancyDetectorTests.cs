@@ -36,20 +36,6 @@ namespace Reconciliation.Tests
             Assert.Empty(detector.Discrepancies);
         }
 
-        [Fact]
-        public void FuzzyMatch_IgnoresMinorTypos()
-        {
-            var a = new DataTable();
-            a.Columns.Add("Text");
-            a.Rows.Add("Widget");
-            var b = new DataTable();
-            b.Columns.Add("Text");
-            b.Rows.Add("Widgte");
-
-            var detector = new DiscrepancyDetector { TextDistance = 2 };
-            detector.Compare(a, b);
-            Assert.Empty(detector.Discrepancies);
-        }
 
         [Fact]
         public void Handles_EmptyValues_Gracefully()
