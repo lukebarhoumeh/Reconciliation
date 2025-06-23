@@ -26,7 +26,6 @@ namespace Reconciliation
         private readonly string[] _requiredMspHubColumns = new[] { "InternalReferenceId", "SkuId", "BillingCycle" };
         private int hoveredIndex = -1;
         private bool isSwitchingMode = false;
-        private bool AllowFuzzyColumns => chkFuzzyColumns.Checked;
         private readonly ToolTip _toolTip = new();
         private readonly FormsTimer _flashTimer = new();
         private string _lastSummary = string.Empty;
@@ -61,7 +60,6 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnExportLogs, "Export log to CSV");
             _toolTip.SetToolTip(btnResetLogs, "Clear logs");
             _toolTip.SetToolTip(btnToggleFiles, "Hide/Show details");
-            _toolTip.SetToolTip(chkFuzzyColumns, "Automatically map similar column headers, e.g. 'SkuName' -> 'SkuId'");
             _toolTip.SetToolTip(cmbFieldFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
             _toolTip.SetToolTip(txtExplanationFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
@@ -231,7 +229,7 @@ namespace Reconciliation
                     ClearFileInfo(lblMicrosoftFileName, lblMicrosoftFileRowCount);
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     // TODO: Import logic moved to FileImportService
-                    var service = new FileImportService(AllowFuzzyColumns);
+                    var service = new FileImportService();
                     _microsoftDataView = service.ImportMicrosoftInvoice(fileInfo.FullName);
 
                     // Show file name and row count
@@ -285,7 +283,7 @@ namespace Reconciliation
                     var fileInfo = new FileInfo(fileDialog.FileName);
                     var size = FormatSize(fileInfo.Length);
                     // TODO: Import logic moved to FileImportService
-                    var service = new FileImportService(AllowFuzzyColumns);
+                    var service = new FileImportService();
                     _sixDotOneDataView = service.ImportSixDotOneInvoice(fileInfo.FullName);
                     _sixDotOneDataView = ReorderColumns(_sixDotOneDataView.Table, _uniqueKeyColumns);
                     lblSixDotOneFileRowCount.Text = _sixDotOneDataView.Table.Rows.Count.ToString();
@@ -587,12 +585,12 @@ namespace Reconciliation
         // Legacy validation methods retained for backward compatibility
         private void ValidateMicrosoftInvoice(DataTable dataTable, string columnName)
         {
-            SchemaValidator.RequireColumns(dataTable, "Microsoft invoice", new[] { columnName }, AllowFuzzyColumns);
+            SchemaValidator.RequireColumns(dataTable, "Microsoft invoice", new[] { columnName });
         }
 
         private void ValidateSixDotOneInvoice(DataTable dataTable, string columnName)
         {
-            SchemaValidator.RequireColumns(dataTable, "MSP Hub invoice", new[] { columnName }, AllowFuzzyColumns);
+            SchemaValidator.RequireColumns(dataTable, "MSP Hub invoice", new[] { columnName });
         }
         private void SplitColumn(DataTable dataTable, string sourceColumnName, string termColumnName, string billingCycleColumnName)
         {

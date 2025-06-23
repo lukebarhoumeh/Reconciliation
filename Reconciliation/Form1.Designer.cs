@@ -56,7 +56,6 @@ using Reconciliation.Properties;
             rbExternal = new RadioButton();
             btnCompare = new Button();
             btnExportToCsv = new Button();
-            chkFuzzyColumns = new CheckBox();
             lblDiscrepancyTitle = new Label();
             lblExternal1DiscrepancyMsg = new Label();
             lblEmptyMessage = new Label();
@@ -235,7 +234,6 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(rbExternal);
             splitMain.Panel1.Controls.Add(btnCompare);
             splitMain.Panel1.Controls.Add(btnExportToCsv);
-            splitMain.Panel1.Controls.Add(chkFuzzyColumns);
             splitMain.Panel1.Controls.Add(lblDiscrepancyTitle);
             splitMain.Panel1.Controls.Add(lblExternal1DiscrepancyMsg);
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
@@ -413,15 +411,6 @@ using Reconciliation.Properties;
             btnExportToCsv.TextAlign = ContentAlignment.MiddleRight;
             btnExportToCsv.UseVisualStyleBackColor = false;
             btnExportToCsv.Click += btnExportToCsv_Click;
-            // chkFuzzyColumns
-            //
-            chkFuzzyColumns.AutoSize = true;
-            chkFuzzyColumns.Location = new Point(2366, 400);
-            chkFuzzyColumns.Name = "chkFuzzyColumns";
-            chkFuzzyColumns.Size = new Size(187, 24);
-            chkFuzzyColumns.TabIndex = 50;
-            chkFuzzyColumns.Text = "Allow fuzzy column match";
-            chkFuzzyColumns.UseVisualStyleBackColor = true;
             //
             // lblDiscrepancyTitle
             // 
@@ -992,7 +981,6 @@ using Reconciliation.Properties;
         private Label lblExternal1DiscrepancyMsg;
         private Button btnExportToCsv;
         private Button btnCompare;
-        private CheckBox chkFuzzyColumns;
         private TabPage tabPage2;
         private Label label3;
         private RadioButton rbInternal;

@@ -7,27 +7,17 @@ namespace Reconciliation
 {
     public static class SchemaValidator
     {
-        public static void RequireColumns(DataTable table, string fileName, IEnumerable<string> required, bool allowFuzzy)
+        public static void RequireColumns(DataTable table, string fileLabel, IEnumerable<string> requiredColumns)
         {
             if (table == null) throw new ArgumentNullException(nameof(table));
-            if (required == null) throw new ArgumentNullException(nameof(required));
+            if (requiredColumns == null) throw new ArgumentNullException(nameof(requiredColumns));
 
-            foreach (var column in required)
-            {
-                if (table.Columns.Contains(column))
-                    continue;
+            var missing = requiredColumns.Where(c => !table.Columns.Contains(c)).ToArray();
+            foreach (var col in missing)
+                ErrorLogger.LogMissingColumn(col, fileLabel);
 
-                if (allowFuzzy && table.TryFuzzyRenameColumn(column))
-                    continue;
-
-                var options = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName);
-                var suggestion = FuzzyMatcher.FindClosest(column, options, 4);
-                ErrorLogger.LogMissingColumn(column, fileName);
-                var message = $"The expected column '{column}' is missing from the {fileName} file.";
-                if (suggestion != null)
-                    message += $" Did you mean '{suggestion}'?";
-                throw new ArgumentException(message);
-            }
+            if (missing.Length > 0)
+                throw new ArgumentException($"{fileLabel} is missing required columns: {string.Join(", ", missing)}");
         }
     }
 }
