@@ -6,6 +6,8 @@
 - Credit and debit rows with the same customer and SKU are now netted before
   calculating price mismatches.
 - Removed ComboBox.PlaceholderText usage and added a selectable "-- Select a Field --" option for compatibility with older WinForms versions.
+- Expression mapping with `{Column}` syntax and per-day rounding tolerance.
+- Composite key list expanded with OrderId and InvoiceNumber; dates normalised to `yyyy-MM-dd`.
 - Accountant-friendly reconciliation outputs with mapped field names, grouped summaries and suggested actions.
 - Filter dropdown and tooltips guide accountants; summaries clear on mode switch and exports include top-level summary row.
 - Implemented structured error logging with CSV export including row numbers and context.
