@@ -8,6 +8,8 @@ namespace Reconciliation
     /// <summary>
     /// Validates MSP Hub invoice records for business rule compliance.
     /// </summary>
+    public record InvoiceValidationResult(DataTable InvalidRows, int HighPriority, int LowPriority);
+
     public class InvoiceValidationService
     {
         /// <summary>
@@ -15,8 +17,8 @@ namespace Reconciliation
         /// validation error details appended as columns.
         /// </summary>
         /// <param name="msphub">Invoice data to validate.</param>
-        /// <returns>Filtered table containing invalid rows.</returns>
-        public DataTable ValidateInvoice(DataTable msphub)
+        /// <returns>Result containing invalid rows and error counts.</returns>
+        public InvoiceValidationResult ValidateInvoice(DataTable msphub)
         {
             if (msphub == null)
                 throw new ArgumentNullException(nameof(msphub));
@@ -35,7 +37,7 @@ namespace Reconciliation
 
             RemoveValidRows(msphub, rowsToRemove);
             stopwatch.Stop();
-            return msphub;
+            return new InvoiceValidationResult(msphub, high, low);
         }
 
         private static void EnsureValidationColumns(DataTable table)
