@@ -79,6 +79,7 @@ namespace Reconciliation
             cmbFieldFilter.TextChanged += FilterResults;
             cmbFieldFilter.SelectedIndexChanged += FilterResults;
             txtExplanationFilter.TextChanged += FilterResults;
+            chkHighPriorityOnly.CheckedChanged += FilterResults;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
                 tbcMenu.TabPages.Remove(tabPage3);
@@ -356,16 +357,12 @@ namespace Reconciliation
                         dgResultdata.Visible = true;
                     }));
                 }
-                else
+                else if (rbAdvanced.Checked)
                 {
-                    _resultData = await Task.Run(() =>
-                    {
-                        var startTime = DateTime.Now; // Capture start time
-
-                        // Validate records
-                        var invalidRecordsTable = new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
-                        return invalidRecordsTable.DefaultView; // Convert DataTable to DataView
-                    });
+                    var svc = CreateAdvancedService();
+                    var result = await Task.Run(() => svc.Reconcile(_microsoftDataView.Table, _sixDotOneDataView.Table));
+                    _resultData = result.Exceptions.DefaultView;
+                    _lastSummary = $"Unmatched: {result.Summary.UnmatchedGroups} Over: {result.Summary.OverBill} Under: {result.Summary.UnderBill}";
 
                     Invoke(new Action(() =>
                     {
@@ -374,6 +371,32 @@ namespace Reconciliation
                         AutoFitColumns(dgResultdata);
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
+                        lblMismatchSummary.Text = _lastSummary;
+                        lblMismatchSummary.Visible = true;
+                        PopulateFieldFilterOptions();
+                        lblEmptyMessage.Visible = _resultData.Count == 0;
+                        dgResultdata.Visible = true;
+                    }));
+                }
+                else
+                {
+                    var validation = await Task.Run(() =>
+                    {
+                        var svc = new InvoiceValidationService();
+                        return svc.ValidateInvoice(_sixDotOneDataView.Table);
+                    });
+                    _resultData = validation.InvalidRows.DefaultView;
+                    _lastSummary = $"High: {validation.HighPriority}  Low: {validation.LowPriority}";
+
+                    Invoke(new Action(() =>
+                    {
+                        BindingSource bindingSource = new BindingSource { DataSource = _resultData };
+                        dgResultdata.DataSource = bindingSource;
+                        AutoFitColumns(dgResultdata);
+                        dgResultdata.ClearSelection();
+                        btnExportToCsv.Enabled = true;
+                        lblMismatchSummary.Text = _lastSummary;
+                        lblMismatchSummary.Visible = true;
 
                         if (dgResultdata.Rows.Count == 0)
                         {
@@ -418,7 +441,7 @@ namespace Reconciliation
                 // Format current date and time
                 string dateTimeNow = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string defaultFileName = $"Export_{dateTimeNow}.xlsx";
-                if (rbExternal.Checked == true)
+                if (rbExternal.Checked == true || rbAdvanced.Checked)
                 {
                     defaultFileName = $"FileComparisonsData_{dateTimeNow}.xlsx";
                 }
@@ -668,6 +691,14 @@ namespace Reconciliation
                 filters.Add($"[Field Name] = '{cmbFieldFilter.SelectedItem.ToString().Replace("'", "''")}'");
             if (!string.IsNullOrWhiteSpace(txtExplanationFilter.Text))
                 filters.Add($"[Explanation] LIKE '%{txtExplanationFilter.Text.Replace("'", "''")}%'");
+            if (chkHighPriorityOnly != null && chkHighPriorityOnly.Checked)
+            {
+                var cols = new[] { "Eff. Days Validation", "Partner Discount Validation" };
+                var checks = cols.Where(c => _resultData.Table.Columns.Contains(c))
+                    .Select(c => $"LEN([{c}]) > 0");
+                if (checks.Any())
+                    filters.Add("(" + string.Join(" OR ", checks) + ")");
+            }
             _resultData.RowFilter = string.Join(" AND ", filters);
             lblMismatchSummary.Text = _lastSummary;
             lblMismatchSummary.Visible = !string.IsNullOrEmpty(_lastSummary);
@@ -780,6 +811,11 @@ namespace Reconciliation
                 modeSetFieldInternal();
                 resetData();
             }
+            else if (rbAdvanced.Checked)
+            {
+                modeSetFieldAdvanced();
+                resetData();
+            }
         }
         private void modeSetFieldInternal()
         {
@@ -835,6 +871,12 @@ namespace Reconciliation
             //}
         }
 
+        private void modeSetFieldAdvanced()
+        {
+            modeSetFieldExternal();
+            rbAdvanced.Checked = true;
+        }
+
         #endregion RadioButton_Modes
 
         #region Export_ToFile
@@ -857,7 +899,7 @@ namespace Reconciliation
                 // Add header row
                 AddHeaderRow(dataTable, worksheet, startRow);
 
-                if (rbExternal.Checked == true)
+                if (rbExternal.Checked || rbAdvanced.Checked)
                 {
                     AddDataRows(dataTable, worksheet, startRow + 1);
                     AddDataRowsWithColor(dataTable, worksheet, startRow + 1);
@@ -1152,6 +1194,11 @@ namespace Reconciliation
             throw new Exception("No network adapters with an IPv4 address in the system!");
         }
         #endregion Export_ToFile
+
+        protected virtual AdvancedReconciliationService CreateAdvancedService()
+        {
+            return new AdvancedReconciliationService();
+        }
 
         #region Compare_Logic
         // TODO: External reconciliation logic moved to ReconciliationService

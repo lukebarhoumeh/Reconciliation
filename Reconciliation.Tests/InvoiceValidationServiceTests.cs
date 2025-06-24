@@ -25,7 +25,9 @@ namespace Reconciliation.Tests
             dt.Rows.Add("2024-01-01","2024-01-30","4","30","19","5","10","10");
             var svc = new InvoiceValidationService();
             var result = svc.ValidateInvoice(dt);
-            Assert.Empty(result.Rows);
+            Assert.Empty(result.InvalidRows.Rows);
+            Assert.Equal(0, result.HighPriority);
+            Assert.Equal(0, result.LowPriority);
         }
 
         [Fact]
@@ -34,8 +36,9 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","4","10","19","5","10","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            Assert.Contains("Mismatch", result.Rows[0]["Eff. Days Validation"].ToString());
+            Assert.Single(result.InvalidRows.Rows);
+            Assert.Contains("Mismatch", result.InvalidRows.Rows[0]["Eff. Days Validation"].ToString());
+            Assert.Equal(1, result.HighPriority);
         }
 
         [Fact]
@@ -44,8 +47,9 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","6","30","5","5","10","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            Assert.Contains("PartnerDiscountPercentage", result.Rows[0]["Partner Discount Validation"].ToString());
+            Assert.Single(result.InvalidRows.Rows);
+            Assert.Contains("PartnerDiscountPercentage", result.InvalidRows.Rows[0]["Partner Discount Validation"].ToString());
+            Assert.Equal(1, result.HighPriority);
         }
 
         [Fact]
@@ -54,7 +58,7 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","6","30","20.05","5","10","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Empty(result.Rows);
+            Assert.Empty(result.InvalidRows.Rows);
         }
 
         [Fact]
@@ -63,8 +67,9 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","6","30","20.2","5","10","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            Assert.Contains("PartnerDiscountPercentage", result.Rows[0]["Partner Discount Validation"].ToString());
+            Assert.Single(result.InvalidRows.Rows);
+            Assert.Contains("PartnerDiscountPercentage", result.InvalidRows.Rows[0]["Partner Discount Validation"].ToString());
+            Assert.Equal(1, result.HighPriority);
         }
 
         [Fact]
@@ -73,8 +78,10 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","4","30","10","20","10","5");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            Assert.Contains("less than", result.Rows[0]["Discount Hierarchy Check"].ToString());
+            Assert.Single(result.InvalidRows.Rows);
+            Assert.Contains("less than", result.InvalidRows.Rows[0]["Discount Hierarchy Check"].ToString());
+            Assert.Equal(0, result.HighPriority);
+            Assert.Equal(1, result.LowPriority);
         }
 
         [Fact]
@@ -83,8 +90,10 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","4","30","19","5","15","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            Assert.Contains("greater", result.Rows[0]["Pricing Consistency Check"].ToString());
+            Assert.Single(result.InvalidRows.Rows);
+            Assert.Contains("greater", result.InvalidRows.Rows[0]["Pricing Consistency Check"].ToString());
+            Assert.Equal(0, result.HighPriority);
+            Assert.Equal(1, result.LowPriority);
         }
 
         [Fact]
@@ -93,8 +102,8 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-31","6","10","5","20","15","10");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Single(result.Rows);
-            var row = result.Rows[0];
+            Assert.Single(result.InvalidRows.Rows);
+            var row = result.InvalidRows.Rows[0];
             Assert.NotEmpty(row["Eff. Days Validation"].ToString());
             Assert.NotEmpty(row["Partner Discount Validation"].ToString());
             Assert.NotEmpty(row["Discount Hierarchy Check"].ToString());
@@ -118,7 +127,7 @@ namespace Reconciliation.Tests
         {
             var dt = CreateTable();
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Empty(result.Rows);
+            Assert.Empty(result.InvalidRows.Rows);
         }
 
         [Fact]
@@ -127,7 +136,7 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","4","30","10","100","10","0");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Empty(result.Rows);
+            Assert.Empty(result.InvalidRows.Rows);
         }
 
         [Fact]
@@ -136,7 +145,7 @@ namespace Reconciliation.Tests
             var dt = CreateTable();
             dt.Rows.Add("2024-01-01","2024-01-30","4","30","10","100","5","0");
             var result = new InvoiceValidationService().ValidateInvoice(dt);
-            Assert.Empty(result.Rows);
+            Assert.Empty(result.InvalidRows.Rows);
         }
     }
 }

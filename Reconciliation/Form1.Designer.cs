@@ -54,6 +54,7 @@ using Reconciliation.Properties;
             label3 = new Label();
             rbInternal = new RadioButton();
             rbExternal = new RadioButton();
+            rbAdvanced = new RadioButton();
             btnCompare = new Button();
             btnExportToCsv = new Button();
             lblDiscrepancyTitle = new Label();
@@ -91,6 +92,7 @@ using Reconciliation.Properties;
             lblExplanationFilter = new Label();
             cmbFieldFilter = new ComboBox();
             txtExplanationFilter = new TextBox();
+            chkHighPriorityOnly = new CheckBox();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             panel1.SuspendLayout();
@@ -232,6 +234,7 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(label3);
             splitMain.Panel1.Controls.Add(rbInternal);
             splitMain.Panel1.Controls.Add(rbExternal);
+            splitMain.Panel1.Controls.Add(rbAdvanced);
             splitMain.Panel1.Controls.Add(btnCompare);
             splitMain.Panel1.Controls.Add(btnExportToCsv);
             splitMain.Panel1.Controls.Add(lblDiscrepancyTitle);
@@ -241,6 +244,7 @@ using Reconciliation.Properties;
             splitMain.Panel1.Controls.Add(cmbFieldFilter);
             splitMain.Panel1.Controls.Add(lblExplanationFilter);
             splitMain.Panel1.Controls.Add(txtExplanationFilter);
+            splitMain.Panel1.Controls.Add(chkHighPriorityOnly);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileName);
@@ -369,9 +373,20 @@ using Reconciliation.Properties;
             rbExternal.TabStop = true;
             rbExternal.Text = "Compare with Microsoft Invoice";
             rbExternal.UseVisualStyleBackColor = true;
-            // 
+            //
+            // rbAdvanced
+            //
+            rbAdvanced.AutoSize = true;
+            rbAdvanced.Location = new Point(650, 43);
+            rbAdvanced.Name = "rbAdvanced";
+            rbAdvanced.Size = new Size(196, 28);
+            rbAdvanced.TabIndex = 36;
+            rbAdvanced.TabStop = true;
+            rbAdvanced.Text = "Advanced Compare";
+            rbAdvanced.UseVisualStyleBackColor = true;
+            //
             // btnCompare
-            // 
+            //
             btnCompare.Anchor = AnchorStyles.Right;
             btnCompare.BackColor = Color.FromArgb(0, 122, 204);
             btnCompare.Cursor = Cursors.Hand;
@@ -486,8 +501,19 @@ using Reconciliation.Properties;
             txtExplanationFilter.TabIndex = 40;
             txtExplanationFilter.PlaceholderText = "Type a keyword (e.g., missing, date, mismatch)";
             //
+            // chkHighPriorityOnly
+            //
+            chkHighPriorityOnly.AutoSize = true;
+            chkHighPriorityOnly.Location = new Point(1740, 262);
+            chkHighPriorityOnly.Name = "chkHighPriorityOnly";
+            chkHighPriorityOnly.Size = new Size(165, 24);
+            chkHighPriorityOnly.TabIndex = 41;
+            chkHighPriorityOnly.Text = "High Priority Only";
+            chkHighPriorityOnly.UseVisualStyleBackColor = true;
+            chkHighPriorityOnly.CheckedChanged += new EventHandler(this.FilterResults);
+            //
             // dgResultdata
-            // 
+            //
             dgResultdata.AllowUserToAddRows = false;
             dgResultdata.AllowUserToDeleteRows = false;
             dgResultdata.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
@@ -985,6 +1011,7 @@ using Reconciliation.Properties;
         private Label label3;
         private RadioButton rbInternal;
         private RadioButton rbExternal;
+        private RadioButton rbAdvanced;
         private Label lblInternal1DiscrepancyMsg;
         private Button btnReset;
         private Label lblExternal2DiscrepancyMsg;
@@ -995,6 +1022,7 @@ using Reconciliation.Properties;
         private Label lblExplanationFilter;
         private ComboBox cmbFieldFilter;
         private TextBox txtExplanationFilter;
+        private CheckBox chkHighPriorityOnly;
         private RichTextBox textLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;

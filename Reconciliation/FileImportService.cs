@@ -49,7 +49,7 @@ namespace Reconciliation
             if (type == SourceType.Microsoft)
                 SchemaValidator.RequireColumns(normalised, "Microsoft invoice", _requiredMicrosoftColumns);
             else
-                SchemaValidator.RequireColumns(normalised, "Partner invoice", _requiredMicrosoftColumns);
+                SchemaValidator.RequireColumns(normalised, "Partner invoice", _requiredMspHubColumns);
             return normalised;
         }
 
@@ -106,7 +106,7 @@ namespace Reconciliation
             // Map all columns to Microsoft equivalents before any validation
             var mapped = MapMspHubColumns(dataView.Table);
             DataQualityValidator.Run(mapped, fileInfo.Name);
-            SchemaValidator.RequireColumns(mapped, "MSP Hub invoice", _requiredMicrosoftColumns);
+            SchemaValidator.RequireColumns(mapped, "MSP Hub invoice", _requiredMspHubColumns);
 
             var view = mapped.DefaultView;
 
