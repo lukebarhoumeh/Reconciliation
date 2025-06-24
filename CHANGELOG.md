@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Added advanced reconciliation service with composite key grouping and mapping
+  via `column-map.json`.
 - Credit and debit rows with the same customer and SKU are now netted before
   calculating price mismatches.
 - Removed ComboBox.PlaceholderText usage and added a selectable "-- Select a Field --" option for compatibility with older WinForms versions.
