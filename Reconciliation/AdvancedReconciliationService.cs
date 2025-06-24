@@ -84,17 +84,17 @@ public class AdvancedReconciliationService
         foreach (DataRow row in table.Rows)
         {
             string key = string.Join("|", Keys.Select(k => Convert.ToString(row[k]) ?? string.Empty));
+            if (dict.ContainsKey(key))
+                duplicates.Add(key);
             if (!dict.TryGetValue(key, out var stats))
             {
                 stats = new Stats();
                 dict[key] = stats;
             }
-            else
-            {
-                duplicates.Add(key);
-            }
             stats.Quantity += ParseDecimal(row["Quantity"]);
-            stats.Total += ParseDecimal(row["Total"]);
+            decimal eup = ParseDecimal(row["EffectiveUnitPrice"]);
+            decimal total = eup != 0m ? eup * ParseDecimal(row["Quantity"]) : ParseDecimal(row["Total"]);
+            stats.Total += total;
         }
         return dict;
     }
