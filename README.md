@@ -18,6 +18,10 @@ Sample templates are available under `samples/`. Ensure the headers match the fo
 ### Running Tests
 Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj`.
 
+### Building the WinForms application
+The project now targets `net8.0-windows` and builds `Reconciliation.exe`.
+After running `dotnet build`, check `bin/Debug` for the generated executable.
+
 - Human-friendly error and warning logs with timestamps and summaries.
 - Logs tab header flashes red for five seconds when new entries are added.
 - Repeated parsing errors are summarised after five occurrences to reduce noise.
