@@ -490,7 +490,7 @@ using Reconciliation.Properties;
             // 
             dgResultdata.AllowUserToAddRows = false;
             dgResultdata.AllowUserToDeleteRows = false;
-            dgResultdata.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgResultdata.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgResultdata.BackgroundColor = Color.White;
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle1.BackColor = Color.RoyalBlue;
@@ -514,7 +514,7 @@ using Reconciliation.Properties;
             dgResultdata.Location = new Point(0, 0);
             dgResultdata.Name = "dgResultdata";
             dgResultdata.ReadOnly = true;
-            dgResultdata.RowHeadersWidth = 51;
+            dgResultdata.RowHeadersVisible = false;
             dgResultdata.RowTemplate.ReadOnly = true;
             dgResultdata.Size = new Size(2775, 607);
             dgResultdata.TabIndex = 28;
@@ -738,7 +738,7 @@ using Reconciliation.Properties;
             // 
             dgAzurePriceMismatch.AllowUserToAddRows = false;
             dgAzurePriceMismatch.AllowUserToDeleteRows = false;
-            dgAzurePriceMismatch.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgAzurePriceMismatch.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgAzurePriceMismatch.BackgroundColor = Color.White;
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle3.BackColor = Color.RoyalBlue;
@@ -762,7 +762,7 @@ using Reconciliation.Properties;
             dgAzurePriceMismatch.Location = new Point(3, 606);
             dgAzurePriceMismatch.Name = "dgAzurePriceMismatch";
             dgAzurePriceMismatch.ReadOnly = true;
-            dgAzurePriceMismatch.RowHeadersWidth = 51;
+            dgAzurePriceMismatch.RowHeadersVisible = false;
             dgAzurePriceMismatch.Size = new Size(1923, 714);
             dgAzurePriceMismatch.TabIndex = 38;
             dgAzurePriceMismatch.Visible = false;
@@ -884,7 +884,7 @@ using Reconciliation.Properties;
             // dgvLogs
             //
             dgvLogs.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            dgvLogs.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvLogs.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvLogs.BackgroundColor = SystemColors.Window;
             dgvLogs.BorderStyle = BorderStyle.None;
             dgvLogs.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -1015,9 +1015,9 @@ using Reconciliation.Properties;
         private void Form1_Load(object sender, EventArgs e)
         {
             Font = new Font("Segoe UI", 9F);
-            dgResultdata.DefaultCellStyle.Font = new Font("Consolas", 9F);
-            dgAzurePriceMismatch.DefaultCellStyle.Font = new Font("Consolas", 9F);
-            dgvLogs.DefaultCellStyle.Font = new Font("Consolas", 9F);
+            dgResultdata.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgAzurePriceMismatch.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgvLogs.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
         }
     }
 }

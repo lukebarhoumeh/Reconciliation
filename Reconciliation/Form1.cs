@@ -92,6 +92,14 @@ namespace Reconciliation
                 tabPage2.ForeColor = SystemColors.ControlText;
                 _flashTimer.Stop();
             };
+
+            ApplyModernGridStyles(dgResultdata);
+            ApplyModernGridStyles(dgAzurePriceMismatch);
+            ApplyModernGridStyles(dgvLogs);
+
+            dgResultdata.RowPostPaint += DataGridView_RowPostPaint;
+            dgAzurePriceMismatch.RowPostPaint += DataGridView_RowPostPaint;
+            dgvLogs.RowPostPaint += DataGridView_RowPostPaint;
         }
         private void EnableDoubleBuffering(Control control)
         {
@@ -178,6 +186,28 @@ namespace Reconciliation
             Rectangle textBounds = new Rectangle(tabBounds.X + 2 * bulletPadding, tabBounds.Y, tabBounds.Width - bulletDiameter - 2 * bulletPadding, tabBounds.Height);
 
             TextRenderer.DrawText(g, tabPage.Text, tabPage.Font, textBounds, tabPage.ForeColor);
+        }
+
+        private void ApplyModernGridStyles(DataGridView grid)
+        {
+            grid.EnableHeadersVisualStyles = false;
+            grid.BackgroundColor = Color.White;
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            grid.RowHeadersVisible = false;
+            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 122, 204);
+            grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+        }
+
+        private void DataGridView_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
+        {
+            var grid = sender as DataGridView;
+            string rowIdx = (e.RowIndex + 1).ToString();
+            using var brush = new SolidBrush(grid.RowHeadersDefaultCellStyle.ForeColor);
+            e.Graphics.DrawString(rowIdx, grid.Font, brush, e.RowBounds.Location.X + 4, e.RowBounds.Location.Y + 4);
         }
 
         #endregion Form_UX
