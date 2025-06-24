@@ -4,6 +4,8 @@
 - Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
 - Added advanced reconciliation service with composite key grouping and mapping
   via `column-map.json`.
+- UI option "Advanced Compare" runs the new engine and shows summary details.
+- Validation results now report counts of high and low priority errors with a filter option.
 - Credit and debit rows with the same customer and SKU are now netted before
   calculating price mismatches.
 - Removed ComboBox.PlaceholderText usage and added a selectable "-- Select a Field --" option for compatibility with older WinForms versions.

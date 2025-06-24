@@ -12,7 +12,7 @@ public class AdvancedReconciliationService
     private decimal ToleranceQuantity => AppConfig.Reconciliation.ToleranceQuantity;
     private IReadOnlyList<string> Keys => AppConfig.Reconciliation.CompositeKeys;
 
-    public ReconciliationResult Reconcile(DataTable msft, DataTable other)
+    public virtual ReconciliationResult Reconcile(DataTable msft, DataTable other)
     {
         if (msft == null) throw new ArgumentNullException(nameof(msft));
         if (other == null) throw new ArgumentNullException(nameof(other));

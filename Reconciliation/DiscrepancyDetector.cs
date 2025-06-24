@@ -77,7 +77,7 @@ namespace Reconciliation
                 }
             }
         }
-
+        
         private bool IsEqual(string a, string b, string column)
         {
             a = a.Trim();
