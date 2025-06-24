@@ -31,3 +31,4 @@
 - Numeric formatter extracted and applied to discrepancy values.
 - Partner discount validation rounds values before comparison and accepts up to 20.1%.
 - Exported logs and grids show money and percentages with at most two decimals.
+- Test project multi-targets `net8.0` and `net8.0-windows` to avoid NU1201 when referencing the UI project.
