@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Reconciliation;
 
 namespace Reconciliation;
 
@@ -51,7 +52,7 @@ public static class CsvSchemaMapper
             foreach (var col in _msColumns)
             {
                 if (!map.TryGetProperty(col, out var def)) { newRow[col] = string.Empty; continue; }
-                newRow[col] = GetValue(def, row, raw);
+                newRow[col] = GetValue(def, row, newRow);
             }
             table.Rows.Add(newRow);
         }
@@ -59,7 +60,7 @@ public static class CsvSchemaMapper
         return table;
     }
 
-    private static string GetValue(JsonElement def, DataRow row, DataTable raw)
+    private static string GetValue(JsonElement def, DataRow sourceRow, DataRow destRow)
     {
         if (def.ValueKind == JsonValueKind.String)
         {
@@ -67,31 +68,37 @@ public static class CsvSchemaMapper
             if (string.IsNullOrEmpty(src)) return string.Empty;
             if (src.Contains("{"))
             {
-                decimal val = ExpressionColumnBuilder.Evaluate(src, row);
+                decimal val = ExpressionColumnBuilder.Evaluate(src, destRow, sourceRow);
                 return val.ToString(CultureInfo.InvariantCulture);
             }
-            return raw.Columns.Contains(src) ? Convert.ToString(row[src]) ?? string.Empty : string.Empty;
+            return sourceRow.Table.Columns.Contains(src)
+                ? Convert.ToString(sourceRow[src]) ?? string.Empty
+                : string.Empty;
         }
         if (def.ValueKind == JsonValueKind.Array)
         {
             var list = def.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
             if (list.Count == 2 && !new[] {"*", "+"}.Contains(list[1]))
             {
-                var first = raw.Columns.Contains(list[0]) ? Convert.ToString(row[list[0]]) ?? string.Empty : string.Empty;
+                var first = sourceRow.Table.Columns.Contains(list[0])
+                    ? Convert.ToString(sourceRow[list[0]]) ?? string.Empty
+                    : string.Empty;
                 if (!string.IsNullOrEmpty(first)) return first;
-                return raw.Columns.Contains(list[1]) ? Convert.ToString(row[list[1]]) ?? string.Empty : string.Empty;
+                return sourceRow.Table.Columns.Contains(list[1])
+                    ? Convert.ToString(sourceRow[list[1]]) ?? string.Empty
+                    : string.Empty;
             }
             if (list.Count == 3 && list[2] == "*")
             {
-                decimal a = ParseDecimal(row, list[0]);
-                decimal b = ParseDecimal(row, list[1]);
+                decimal a = ParseDecimal(sourceRow, list[0]);
+                decimal b = ParseDecimal(sourceRow, list[1]);
                 return (a * b).ToString(CultureInfo.InvariantCulture);
             }
             if (list.Count == 4 && list[2] == "+")
             {
-                decimal a = ParseDecimal(row, list[0]);
-                decimal b = ParseDecimal(row, list[1]);
-                decimal c = ParseDecimal(row, list[3]);
+                decimal a = ParseDecimal(sourceRow, list[0]);
+                decimal b = ParseDecimal(sourceRow, list[1]);
+                decimal c = ParseDecimal(sourceRow, list[3]);
                 return (a * b + c).ToString(CultureInfo.InvariantCulture);
             }
         }
