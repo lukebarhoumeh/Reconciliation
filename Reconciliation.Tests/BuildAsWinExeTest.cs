@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+#if HAS_UI
 
 namespace Reconciliation.Tests
 {
@@ -15,3 +16,4 @@ namespace Reconciliation.Tests
         }
     }
 }
+#endif
