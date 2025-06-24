@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
 - Added advanced reconciliation service with composite key grouping and mapping
   via `column-map.json`.
 - Credit and debit rows with the same customer and SKU are now netted before
