@@ -17,6 +17,9 @@ namespace Reconciliation
         /// <summary>Maximum numeric difference considered equal.</summary>
         public decimal NumericTolerance { get; set; } = AppConfig.Validation.NumericTolerance;
 
+        /// <summary>Allowed rounding difference for per-day unit prices.</summary>
+        public decimal PerDayUnitTolerance { get; set; } = AppConfig.Reconciliation.PerDayUnitTolerance;
+
         /// <summary>Maximum allowed days between two dates to be considered equal.</summary>
         public TimeSpan DateTolerance { get; set; } = TimeSpan.FromDays(AppConfig.Validation.DateToleranceDays);
 
@@ -85,7 +88,10 @@ namespace Reconciliation
             if (decimal.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal da) &&
                 decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal db))
             {
-                return Math.Abs(da - db) <= NumericTolerance;
+                decimal tol = column.Contains("PerDayUnitPrice", StringComparison.OrdinalIgnoreCase)
+                    ? PerDayUnitTolerance
+                    : NumericTolerance;
+                return Math.Abs(da - db) <= tol;
             }
             if (DateTime.TryParse(a, out DateTime ta) && DateTime.TryParse(b, out DateTime tb))
             {

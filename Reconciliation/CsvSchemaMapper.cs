@@ -65,6 +65,11 @@ public static class CsvSchemaMapper
         {
             var src = def.GetString();
             if (string.IsNullOrEmpty(src)) return string.Empty;
+            if (src.Contains("{"))
+            {
+                decimal val = ExpressionColumnBuilder.Evaluate(src, row);
+                return val.ToString(CultureInfo.InvariantCulture);
+            }
             return raw.Columns.Contains(src) ? Convert.ToString(row[src]) ?? string.Empty : string.Empty;
         }
         if (def.ValueKind == JsonValueKind.Array)

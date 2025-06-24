@@ -21,7 +21,7 @@ public static class DataNormaliser
                     value = value.ToUpperInvariant();
                 if (DateTime.TryParse(value, out var date))
                 {
-                    row[col] = date.ToString("yyyy-MM-dd");
+                    row[col] = date.Date.ToString("yyyy-MM-dd");
                     continue;
                 }
                 if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var dec))

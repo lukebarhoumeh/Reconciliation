@@ -63,4 +63,13 @@ Use the **Export** menu to save error logs or comparison results.
 The new reconciliation engine loads mapping rules from `column-map.json` and
 groups rows by a composite key to detect genuine billing differences.
 
+### Expression mapping
+Derived numeric columns in the map can use arithmetic expressions. Place column
+names inside curly braces, e.g. `{UnitPrice} * {Quantity}`. Expressions are
+evaluated per row before normalisation.
+
+Composite keys are configured in `appsettings.json`. Add or remove column names
+to match how your data uniquely identifies invoice lines.
+
+
 
