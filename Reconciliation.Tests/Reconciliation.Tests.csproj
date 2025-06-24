@@ -37,7 +37,16 @@
     <Compile Include="../Reconciliation/PriceMismatchService.cs" Link="PriceMismatchService.cs" />
     <Compile Include="../Reconciliation/FriendlyNameMap.cs" Link="FriendlyNameMap.cs" />
     <Compile Include="../Reconciliation/NumericFormatter.cs" Link="NumericFormatter.cs" />
+    <Compile Include="../Reconciliation/SourceType.cs" Link="SourceType.cs" />
+    <Compile Include="../Reconciliation/SourceTypeDetector.cs" Link="SourceTypeDetector.cs" />
+    <Compile Include="../Reconciliation/CsvSchemaMapper.cs" Link="CsvSchemaMapper.cs" />
+    <Compile Include="../Reconciliation/DataNormaliser.cs" Link="DataNormaliser.cs" />
+    <Compile Include="../Reconciliation/AdvancedReconciliationService.cs" Link="AdvancedReconciliationService.cs" />
+    <Compile Include="../Reconciliation/ReconciliationResult.cs" Link="ReconciliationResult.cs" />
     <None Include="TestData\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../Reconciliation/column-map.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -40,6 +40,19 @@ namespace Reconciliation
         {
         }
 
+        public DataTable Import(string filePath)
+        {
+            var dataView = CsvNormalizer.NormalizeCsv(filePath);
+            var type = SourceTypeDetector.FromFilename(filePath);
+            var normalised = CsvSchemaMapper.Normalize(dataView.Table, type);
+            DataQualityValidator.Run(normalised, Path.GetFileName(filePath));
+            if (type == SourceType.Microsoft)
+                SchemaValidator.RequireColumns(normalised, "Microsoft invoice", _requiredMicrosoftColumns);
+            else
+                SchemaValidator.RequireColumns(normalised, "Partner invoice", _requiredMicrosoftColumns);
+            return normalised;
+        }
+
         /// <summary>
         /// Import a Microsoft invoice CSV file.
         /// </summary>
