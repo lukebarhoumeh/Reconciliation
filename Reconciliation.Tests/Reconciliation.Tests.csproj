@@ -5,6 +5,7 @@
     <UseWindowsForms>false</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -26,6 +27,9 @@
       <Link>appsettings.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <Compile Include="../Reconciliation/AppConfig.cs" Link="AppConfig.cs" />
     <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
     <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
@@ -45,6 +49,7 @@
     <Compile Include="../Reconciliation/DataNormaliser.cs" Link="DataNormaliser.cs" />
     <Compile Include="../Reconciliation/AdvancedReconciliationService.cs" Link="AdvancedReconciliationService.cs" />
     <Compile Include="../Reconciliation/ReconciliationResult.cs" Link="ReconciliationResult.cs" />
+    <Compile Include="../Reconciliation/InvoiceValidationResult.cs" Link="InvoiceValidationResult.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -59,6 +64,7 @@
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
     <DefineConstants>$(DefineConstants);HAS_UI</DefineConstants>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
 </Project>

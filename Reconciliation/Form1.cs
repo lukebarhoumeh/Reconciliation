@@ -415,7 +415,7 @@ namespace Reconciliation
                         var svc = new InvoiceValidationService();
                         return svc.ValidateInvoice(_sixDotOneDataView.Table);
                     });
-                    _resultData = validation.InvalidRows.DefaultView;
+                    _resultData = validation.InvalidRowsView;
                     _lastSummary = $"High: {validation.HighPriority}  Low: {validation.LowPriority}";
 
                     Invoke(new Action(() =>
@@ -1517,25 +1517,18 @@ namespace Reconciliation
                 }
                 else
                 {
-                    _resultData = await Task.Run(() =>
+                    var invalResult = await Task.Run(() =>
                     {
                         var startTime = DateTime.Now; // Capture start time
 
                         // Validate records
-                        var invalidRecordsTable = new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
-                        return invalidRecordsTable.DefaultView; // Convert DataTable to DataView
+                        return new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
                     });
+                    _resultData = invalResult.InvalidRowsView;
 
                     Invoke(new Action(() =>
                     {
-                        var invalidData = _resultData.Table.Clone();
-
-                        foreach (DataRow row in _resultData.Table.Rows)
-                        {
-                            DataRow newRow = invalidData.NewRow();
-                            newRow.ItemArray = row.ItemArray; // Copy row data
-                            invalidData.Rows.Add(newRow); // Add row to new DataTable
-                        }
+                        var invalidData = invalResult.InvalidRows.Copy();
 
                         dgResultdata.DataSource = invalidData.DefaultView;
                         dgResultdata.ClearSelection();
