@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+<<<<<<< HEAD
   <PropertyGroup>
     <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
     <UseWindowsForms>false</UseWindowsForms>
@@ -60,5 +61,73 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
     <DefineConstants>$(DefineConstants);HAS_UI</DefineConstants>
   </PropertyGroup>
+=======
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms>false</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="EPPlus" Version="7.6.1" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <None Include="../Reconciliation/appsettings.json">
+      <Link>appsettings.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <Compile Include="../Reconciliation/AppConfig.cs" Link="AppConfig.cs" />
+    <Compile Include="../Reconciliation/CsvNormalizer.cs" Link="CsvNormalizer.cs" />
+    <Compile Include="../Reconciliation/ErrorLogger.cs" Link="ErrorLogger.cs" />
+    <Compile Include="../Reconciliation/DiscrepancyDetector.cs" Link="DiscrepancyDetector.cs" />
+    <Compile Include="../Reconciliation/DataQualityValidator.cs" Link="DataQualityValidator.cs" />
+    <Compile Include="../Reconciliation/SchemaValidator.cs" Link="SchemaValidator.cs" />
+    <Compile Include="../Reconciliation/ReconciliationService.cs" Link="ReconciliationService.cs" />
+    <Compile Include="../Reconciliation/FileImportService.cs" Link="FileImportService.cs" />
+    <Compile Include="../Reconciliation/InvoiceValidationService.cs" Link="InvoiceValidationService.cs" />
+    <Compile Include="../Reconciliation/PriceMismatchService.cs" Link="PriceMismatchService.cs" />
+    <Compile Include="../Reconciliation/FriendlyNameMap.cs" Link="FriendlyNameMap.cs" />
+    <Compile Include="../Reconciliation/NumericFormatter.cs" Link="NumericFormatter.cs" />
+    <Compile Include="../Reconciliation/SourceType.cs" Link="SourceType.cs" />
+    <Compile Include="../Reconciliation/SourceTypeDetector.cs" Link="SourceTypeDetector.cs" />
+    <Compile Include="../Reconciliation/ExpressionColumnBuilder.cs" Link="ExpressionColumnBuilder.cs" />
+    <Compile Include="../Reconciliation/CsvSchemaMapper.cs" Link="CsvSchemaMapper.cs" />
+    <Compile Include="../Reconciliation/DataNormaliser.cs" Link="DataNormaliser.cs" />
+    <Compile Include="../Reconciliation/AdvancedReconciliationService.cs" Link="AdvancedReconciliationService.cs" />
+    <Compile Include="../Reconciliation/ReconciliationResult.cs" Link="ReconciliationResult.cs" />
+    <Compile Include="../Reconciliation/InvoiceValidationResult.cs" Link="InvoiceValidationResult.cs" />
+    <None Include="TestData\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../Reconciliation/column-map.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <ProjectReference Include="..\Reconciliation\Reconciliation.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <DefineConstants>$(DefineConstants);HAS_UI</DefineConstants>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+>>>>>>> 13218a6356649774c2cbfacfc40c473daa2a1c0a
 
 </Project>
