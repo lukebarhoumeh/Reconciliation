@@ -1528,9 +1528,7 @@ namespace Reconciliation
 
                     Invoke(new Action(() =>
                     {
-                        var invalidData = invalResult.InvalidRows.Copy();
-
-                        dgResultdata.DataSource = invalidData.DefaultView;
+                        dgResultdata.DataSource = invalResult.InvalidRowsView;
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
 
