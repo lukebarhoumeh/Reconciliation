@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -6,107 +6,166 @@ using System.Linq;
 
 namespace Reconciliation;
 
+/// <summary>
+/// Order‑agnostic reconciliation engine.
+/// Aggregates each CSV on the composite key, compares money / quantity with
+/// tolerances, and emits a flat discrepancy table ready for UI binding.
+/// </summary>
 public class AdvancedReconciliationService
 {
-    private decimal ToleranceAmount => AppConfig.Reconciliation.ToleranceAmount;
-    private decimal ToleranceQuantity => AppConfig.Reconciliation.ToleranceQuantity;
-    private IReadOnlyList<string> Keys => AppConfig.Reconciliation.CompositeKeys;
+    // ── Config values pulled once for speed ──────────────────────────────────
+    private readonly decimal _tolAmount = AppConfig.Reconciliation.ToleranceAmount;
+    private readonly decimal _tolQuantity = AppConfig.Reconciliation.ToleranceQuantity;
+    private readonly decimal _highPriCut = AppConfig.Reconciliation.HighPriorityThreshold;
+    private readonly IReadOnlyList<string> _keyCols = AppConfig.Reconciliation.CompositeKeys;
 
-    public virtual ReconciliationResult Reconcile(DataTable msft, DataTable other)
+    // ── Public façade ────────────────────────────────────────────────────────
+    public virtual ReconciliationResult Reconcile(DataTable microsoft, DataTable partner)
     {
-        if (msft == null) throw new ArgumentNullException(nameof(msft));
-        if (other == null) throw new ArgumentNullException(nameof(other));
+        if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
+        if (partner == null) throw new ArgumentNullException(nameof(partner));
 
-        var msGroups = BuildGroups(msft, out var msDup);
-        var otherGroups = BuildGroups(other, out var otherDup);
+        var msGroups = BuildGroups(microsoft, out var msDuplicates);
+        var ptGroups = BuildGroups(partner, out var ptDuplicates);
 
-        DataTable table = new();
-        table.Columns.Add("Key");
-        table.Columns.Add("Discrepancy");
-        table.Columns.Add("MicrosoftTotal");
-        table.Columns.Add("PartnerTotal");
-        table.Columns.Add("MicrosoftQty");
-        table.Columns.Add("PartnerQty");
+        var resultTable = BuildResultTable();
+        int discrepancyCount = 0;
+        decimal over = 0m, under = 0m;
 
-        int unmatched = 0;
-        decimal over = 0m;
-        decimal under = 0m;
-
-        var allKeys = new HashSet<string>(msGroups.Keys.Concat(otherGroups.Keys));
-        foreach (var key in allKeys)
+        // Compare every key that appears in either file
+        foreach (var key in msGroups.Keys.Union(ptGroups.Keys))
         {
-            msGroups.TryGetValue(key, out var msStats);
-            otherGroups.TryGetValue(key, out var ptStats);
+            msGroups.TryGetValue(key, out var ms);
+            ptGroups.TryGetValue(key, out var pt);
 
-            if (msStats == null)
+            if (ms == null)
             {
-                AddRow(table, key, "MISSING_IN_MICROSOFT", null, ptStats);
-                unmatched++;
-                over += ptStats.Total;
+                AddRow(resultTable, key, "MISSING_IN_MICROSOFT", null, pt,
+                       highPriority: true);
+                discrepancyCount++;
+                over += pt!.Total;
                 continue;
             }
-            if (ptStats == null)
+
+            if (pt == null)
             {
-                AddRow(table, key, "MISSING_IN_PARTNER", msStats, null);
-                unmatched++;
-                under += msStats.Total;
+                AddRow(resultTable, key, "MISSING_IN_PARTNER", ms, null,
+                       highPriority: true);
+                discrepancyCount++;
+                under += ms.Total;
                 continue;
             }
-            if (Math.Abs(msStats.Total - ptStats.Total) > ToleranceAmount)
+
+            bool added = false;
+
+            // Total mismatch
+            if (Math.Abs(ms.Total - pt.Total) > _tolAmount)
             {
-                AddRow(table, key, "TOTAL_MISMATCH", msStats, ptStats);
-                unmatched++;
+                AddRow(resultTable, key, "TOTAL_MISMATCH", ms, pt,
+                       highPriority: Math.Abs(ms.Total - pt.Total) >= _highPriCut);
+                discrepancyCount++;
+                added = true;
             }
-            if (Math.Abs(msStats.Quantity - ptStats.Quantity) > ToleranceQuantity)
+
+            // Quantity mismatch
+            if (Math.Abs(ms.Quantity - pt.Quantity) > _tolQuantity)
             {
-                AddRow(table, key, "QUANTITY_MISMATCH", msStats, ptStats);
-                unmatched++;
+                AddRow(resultTable, key,
+                       added ? "QUANTITY_MISMATCH (same key)" : "QUANTITY_MISMATCH",
+                       ms, pt, highPriority: false);
+                // count only once per key (already counted if totals mismatched)
+                if (!added) discrepancyCount++;
             }
         }
 
-        foreach (var d in msDup.Concat(otherDup))
-            AddRow(table, d, "DUPLICATE_KEY", null, null);
+        // Duplicates are always high‑priority
+        foreach (var dupKey in msDuplicates.Concat(ptDuplicates).Distinct())
+            AddRow(resultTable, dupKey, "DUPLICATE_KEY", null, null, highPriority: true);
 
-        var summary = new ReconciliationSummary(msft.Rows.Count + other.Rows.Count, unmatched, over, under);
-        return new ReconciliationResult(table, summary);
+        var summary = new ReconciliationSummary(
+            microsoft.Rows.Count + partner.Rows.Count,
+            discrepancyCount, over, under);
+
+        return new ReconciliationResult(resultTable, summary);
     }
 
-    private class Stats
+    // ── Internal helpers ─────────────────────────────────────────────────────
+    private sealed class Stats
     {
         public decimal Quantity;
         public decimal Total;
+        public bool ContainsRefund;   // used for priority flag
     }
 
-    private Dictionary<string, Stats> BuildGroups(DataTable table, out List<string> duplicates)
+    /// <summary>
+    /// Groups rows by the composite key and aggregates quantity/total.
+    /// </summary>
+    private Dictionary<string, Stats> BuildGroups(
+        DataTable table, out List<string> duplicateKeys)
     {
-        var dict = new Dictionary<string, Stats>();
-        duplicates = new List<string>();
+        var dict = new Dictionary<string, Stats>(StringComparer.OrdinalIgnoreCase);
+        var dups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (DataRow row in table.Rows)
         {
-            string key = string.Join("|", Keys.Select(k => Convert.ToString(row[k]) ?? string.Empty));
-            if (dict.ContainsKey(key))
-                duplicates.Add(key);
+            var key = string.Join("|",
+                        _keyCols.Select(k => (row[k]?.ToString() ?? string.Empty).Trim()));
+
             if (!dict.TryGetValue(key, out var stats))
             {
                 stats = new Stats();
                 dict[key] = stats;
             }
+            else
+            {
+                dups.Add(key); // record duplicate
+            }
+
             stats.Quantity += ParseDecimal(row["Quantity"]);
-            decimal eup = ParseDecimal(row["EffectiveUnitPrice"]);
-            decimal total = eup != 0m ? eup * ParseDecimal(row["Quantity"]) : ParseDecimal(row["Total"]);
-            stats.Total += total;
+            stats.Total += EffectiveTotal(row);
+            if (string.Equals(row["ChargeType"]?.ToString(), "Refund",
+                              StringComparison.OrdinalIgnoreCase))
+                stats.ContainsRefund = true;
         }
+
+        duplicateKeys = dups.ToList();
         return dict;
     }
 
-    private static decimal ParseDecimal(object? obj)
+    private static decimal EffectiveTotal(DataRow row)
     {
-        if (obj == null) return 0m;
-        decimal.TryParse(Convert.ToString(obj), NumberStyles.Any, CultureInfo.InvariantCulture, out var d);
+        decimal eup = ParseDecimal(row["EffectiveUnitPrice"]);
+        decimal qty = ParseDecimal(row["Quantity"]);
+        decimal total = ParseDecimal(row["Total"]);
+
+        return eup != 0m ? eup * qty : total;
+    }
+
+    private static decimal ParseDecimal(object? value)
+    {
+        if (value == null) return 0m;
+        decimal.TryParse(Convert.ToString(value), NumberStyles.Any,
+                         CultureInfo.InvariantCulture, out var d);
         return d;
     }
 
-    private static void AddRow(DataTable table, string key, string type, Stats? ms, Stats? pt)
+    /// <summary>Creates a shell table with all columns strongly typed as string.</summary>
+    private static DataTable BuildResultTable()
+    {
+        var t = new DataTable();
+        t.Columns.Add("Key");
+        t.Columns.Add("Discrepancy");
+        t.Columns.Add("MicrosoftTotal");
+        t.Columns.Add("PartnerTotal");
+        t.Columns.Add("MicrosoftQty");
+        t.Columns.Add("PartnerQty");
+        t.Columns.Add("IsHighPriority");   // new column expected by UI
+        return t;
+    }
+
+    private static void AddRow(
+        DataTable table, string key, string type,
+        Stats? ms, Stats? pt, bool highPriority)
     {
         var r = table.NewRow();
         r["Key"] = key;
@@ -115,6 +174,7 @@ public class AdvancedReconciliationService
         r["PartnerTotal"] = pt?.Total.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
         r["MicrosoftQty"] = ms?.Quantity.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
         r["PartnerQty"] = pt?.Quantity.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        r["IsHighPriority"] = highPriority;
         table.Rows.Add(r);
     }
 }
