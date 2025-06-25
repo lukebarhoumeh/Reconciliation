@@ -140,6 +140,13 @@ namespace Reconciliation
                 _summary[group] = 1;
         }
 
+        private IEnumerable<Discrepancy> OrderedDiscrepancies()
+        {
+            return _discrepancies
+                .OrderBy(d => d.Row)
+                .ThenBy(d => d.Column, StringComparer.OrdinalIgnoreCase);
+        }
+
         private static string FormatValue(string value, string column)
         {
             if (decimal.TryParse(value.TrimEnd('%'), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
@@ -164,7 +171,7 @@ namespace Reconciliation
             table.Columns.Add("Explanation", typeof(string));
             table.Columns.Add("Suggested Action", typeof(string));
 
-            foreach (var d in _discrepancies)
+            foreach (var d in OrderedDiscrepancies())
             {
                 var row = table.NewRow();
                 string group = GetGroupName(d.Column, d.Explanation);
@@ -206,7 +213,7 @@ namespace Reconciliation
                 $"Summary: {summaryLine}",
                 "Row Number,Field Name,Our Value,Microsoft Value,Explanation,Suggested Action"
             };
-            foreach (var d in _discrepancies)
+            foreach (var d in OrderedDiscrepancies())
             {
                 string left = FormatValue(d.LeftValue, d.Column);
                 string right = FormatValue(d.RightValue, d.Column);
