@@ -12,6 +12,7 @@
     <FileVersion>4.0.0.8</FileVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.6.1" />

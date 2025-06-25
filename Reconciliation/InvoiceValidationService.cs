@@ -8,7 +8,6 @@ namespace Reconciliation
     /// <summary>
     /// Validates MSP Hub invoice records for business rule compliance.
     /// </summary>
-    public record InvoiceValidationResult(DataTable InvalidRows, int HighPriority, int LowPriority);
 
     public class InvoiceValidationService
     {
