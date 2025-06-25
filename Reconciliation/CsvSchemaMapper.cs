@@ -1,116 +1,185 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Reconciliation;
+using System.Text.RegularExpressions;
 
 namespace Reconciliation;
 
+/// <summary>
+/// Maps arbitrary CSV headers into the canonical Microsoft schema
+/// defined in column‑map.json, adds any missing columns, and
+/// evaluates simple arithmetic expressions where needed.
+/// </summary>
 public static class CsvSchemaMapper
 {
-    private static readonly Lazy<Dictionary<string, JsonElement>> _maps = new(LoadMap);
+    // ───────────────────────────────────────────────────────────────
+    // 1.  LAZY‑LOADED MAP (THREAD‑SAFE)
+    // ───────────────────────────────────────────────────────────────
+    private static readonly Lazy<Dictionary<string, JsonElement>> _maps =
+        new(() => LoadMap(), isThreadSafe: true);
 
     private static Dictionary<string, JsonElement> LoadMap()
     {
-        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConfig.Reconciliation.ColumnMapPath);
-        if (!File.Exists(path)) throw new FileNotFoundException("Column map not found", path);
-        using var doc = JsonDocument.Parse(File.ReadAllText(path));
-        var dict = new Dictionary<string, JsonElement>();
-        foreach (var p in doc.RootElement.EnumerateObject())
+        // Ordered list of locations to probe
+        var candidatePaths = new[]
         {
-            dict[p.Name] = p.Value.Clone();
-        }
-        return dict;
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                         AppConfig.Reconciliation.ColumnMapPath ?? "column-map.json"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "column-map.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "column-map.json")
+        }.Distinct().ToArray();
+
+        string? found = candidatePaths.FirstOrDefault(File.Exists);
+        if (found == null)
+            throw new FileNotFoundException(
+                $"column-map.json could not be located. Paths checked:\n• " +
+                string.Join("\n• ", candidatePaths));
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(found));
+        return doc.RootElement.EnumerateObject()
+                              .ToDictionary(p => p.Name, p => p.Value.Clone(),
+                                            StringComparer.OrdinalIgnoreCase);
     }
 
+    // ───────────────────────────────────────────────────────────────
+    // 2.  CANONICAL MICROSOFT COLUMN LIST  (must match FileImport)
+    // ───────────────────────────────────────────────────────────────
     private static readonly string[] _msColumns =
     {
+        // Identity
         "PartnerId","CustomerId","CustomerName","CustomerDomainName","CustomerCountry",
-        "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ProductId","SkuId",
-        "AvailabilityId","SkuName","ProductName","ChargeType","UnitPrice","Quantity",
-        "Subtotal","TaxTotal","Total","Currency","PriceAdjustmentDescription",
+        // Commercial identifiers
+        "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ReferenceId",
+        // Product identifiers
+        "ProductId","SkuId","AvailabilityId","SkuName","ProductName",
+        // Financials
+        "ChargeType","UnitPrice","Quantity","Subtotal","TaxTotal","Total","Currency",
+        "PriceAdjustmentDescription",
+        // Metadata
         "PublisherName","PublisherId","SubscriptionDescription","SubscriptionId",
         "ChargeStartDate","ChargeEndDate","TermAndBillingCycle","EffectiveUnitPrice",
         "UnitType","AlternateId","BillableQuantity","BillingFrequency","PricingCurrency",
         "PCToBCExchangeRate","PCToBCExchangeRateDate","MeterDescription","ReservationOrderId",
-        "CreditReasonCode","SubscriptionStartDate","SubscriptionEndDate","ReferenceId",
-        "ProductQualifiers","PromotionId","ProductCategory"
+        "CreditReasonCode","SubscriptionStartDate","SubscriptionEndDate",
+        "ProductQualifiers","PromotionId","ProductCategory",
+        // Split columns used by match engine
+        "Term","BillingCycle"
     };
 
+    // ───────────────────────────────────────────────────────────────
+    // 3.  PUBLIC API
+    // ───────────────────────────────────────────────────────────────
     public static DataTable Normalize(DataTable raw, SourceType type)
     {
         if (raw == null) throw new ArgumentNullException(nameof(raw));
+
         var map = _maps.Value[TypeName(type)];
         DataTable table = new();
-        foreach (var col in _msColumns) table.Columns.Add(col);
-        foreach (DataRow row in raw.Rows)
+
+        // Ensure the canonical columns exist in order
+        foreach (var col in _msColumns)
+            table.Columns.Add(col, typeof(string));
+
+        // Map each incoming row
+        foreach (DataRow src in raw.Rows)
         {
-            DataRow newRow = table.NewRow();
-            foreach (var col in _msColumns)
+            DataRow dest = table.NewRow();
+            foreach (var canonical in _msColumns)
             {
-                if (!map.TryGetProperty(col, out var def)) { newRow[col] = string.Empty; continue; }
-                newRow[col] = GetValue(def, row, newRow);
+                dest[canonical] = ResolveValue(map, canonical, src, dest);
             }
-            table.Rows.Add(newRow);
+            table.Rows.Add(dest);
         }
+
+        // Optional post‑normalisation (e.g. trim, upper‑case, etc.)
         DataNormaliser.Normalise(table, AppConfig.Reconciliation.CompositeKeys);
         return table;
     }
 
-    private static string GetValue(JsonElement def, DataRow sourceRow, DataRow destRow)
+    // ───────────────────────────────────────────────────────────────
+    // 4.  VALUE RESOLUTION  (string | array | expression)
+    // ───────────────────────────────────────────────────────────────
+    private static string ResolveValue(
+        JsonElement map, string canonical, DataRow src, DataRow dest)
     {
-        if (def.ValueKind == JsonValueKind.String)
+        if (!map.TryGetProperty(canonical, out JsonElement def))
+            return string.Empty;
+
+        return def.ValueKind switch
         {
-            var src = def.GetString();
-            if (string.IsNullOrEmpty(src)) return string.Empty;
-            if (src.Contains("{"))
-            {
-                decimal val = ExpressionColumnBuilder.Evaluate(src, destRow, sourceRow);
-                return val.ToString(CultureInfo.InvariantCulture);
-            }
-            return sourceRow.Table.Columns.Contains(src)
-                ? Convert.ToString(sourceRow[src]) ?? string.Empty
-                : string.Empty;
-        }
-        if (def.ValueKind == JsonValueKind.Array)
+            JsonValueKind.String => ResolveScalar(def.GetString()!, src, dest),
+            JsonValueKind.Array => ResolveArray(def, src),
+            _ => string.Empty
+        };
+    }
+
+    private static string ResolveScalar(string token, DataRow src, DataRow dest)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return string.Empty;
+
+        // Expression like "{UnitPrice} * {Quantity}"
+        if (token.Contains('{'))
         {
-            var list = def.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
-            if (list.Count == 2 && !new[] {"*", "+"}.Contains(list[1]))
-            {
-                var first = sourceRow.Table.Columns.Contains(list[0])
-                    ? Convert.ToString(sourceRow[list[0]]) ?? string.Empty
-                    : string.Empty;
-                if (!string.IsNullOrEmpty(first)) return first;
-                return sourceRow.Table.Columns.Contains(list[1])
-                    ? Convert.ToString(sourceRow[list[1]]) ?? string.Empty
-                    : string.Empty;
-            }
-            if (list.Count == 3 && list[2] == "*")
-            {
-                decimal a = ParseDecimal(sourceRow, list[0]);
-                decimal b = ParseDecimal(sourceRow, list[1]);
-                return (a * b).ToString(CultureInfo.InvariantCulture);
-            }
-            if (list.Count == 4 && list[2] == "+")
-            {
-                decimal a = ParseDecimal(sourceRow, list[0]);
-                decimal b = ParseDecimal(sourceRow, list[1]);
-                decimal c = ParseDecimal(sourceRow, list[3]);
-                return (a * b + c).ToString(CultureInfo.InvariantCulture);
-            }
+            decimal val = ExpressionColumnBuilder.Evaluate(token, dest, src);
+            return val.ToString(CultureInfo.InvariantCulture);
         }
+
+        // Plain column alias
+        return src.Table.Columns.Contains(token)
+             ? Convert.ToString(src[token]) ?? string.Empty
+             : string.Empty;
+    }
+
+    private static string ResolveArray(JsonElement arr, DataRow src)
+    {
+        var items = arr.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToArray();
+
+        // Pattern: ["Col1", "Col2"] → first non‑empty
+        if (items.Length == 2 && items.All(s => s != "*" && s != "+"))
+        {
+            foreach (var col in items)
+                if (!string.IsNullOrEmpty(Safe(src, col))) return Safe(src, col);
+            return string.Empty;
+        }
+
+        // Pattern: ["A","B","*"] → A * B
+        if (items.Length == 3 && items[2] == "*")
+        {
+            decimal a = ParseDecimal(src, items[0]);
+            decimal b = ParseDecimal(src, items[1]);
+            return (a * b).ToString(CultureInfo.InvariantCulture);
+        }
+
+        // Pattern: ["A","B","+","C"] → (A * B) + C
+        if (items.Length == 4 && items[2] == "+")
+        {
+            decimal a = ParseDecimal(src, items[0]);
+            decimal b = ParseDecimal(src, items[1]);
+            decimal c = ParseDecimal(src, items[3]);
+            return (a * b + c).ToString(CultureInfo.InvariantCulture);
+        }
+
         return string.Empty;
     }
 
+    // ───────────────────────────────────────────────────────────────
+    // 5.  UTILITY
+    // ───────────────────────────────────────────────────────────────
     private static decimal ParseDecimal(DataRow row, string col)
     {
-        string val = row.Table.Columns.Contains(col) ? Convert.ToString(row[col]) ?? string.Empty : string.Empty;
+        var val = Safe(row, col);
         decimal.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var d);
         return d;
     }
+
+    private static string Safe(DataRow row, string col) =>
+        row.Table.Columns.Contains(col) && row[col] != DBNull.Value
+            ? Convert.ToString(row[col]) ?? string.Empty
+            : string.Empty;
 
     private static string TypeName(SourceType t) => t switch
     {

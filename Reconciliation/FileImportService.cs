@@ -1,299 +1,254 @@
+﻿using System;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Reconciliation
 {
     /// <summary>
-    /// Provides helper methods to import and normalize invoice CSV files.
+    /// Handles all CSV ingestion, normalisation and schema checks
+    /// for Microsoft and MSP‑Hub invoice files.
     /// </summary>
     public class FileImportService
     {
-        private readonly string[] _uniqueKeyColumns =
+        // ─────────────────────────────────────────────────────────────
+        // 1.  CONFIGURATION CONSTANTS
+        // ─────────────────────────────────────────────────────────────
+
+        private static readonly string[] UniqueKeyColumns =
         {
-            "CustomerDomainName", "ProductId", "SkuId", "ChargeType", "Term", "BillingCycle"
-        };
-        private readonly string[] _requiredMicrosoftColumns =
-        {
-            "CustomerDomainName", "ProductId", "SkuId", "ChargeType", "TermAndBillingCycle"
-        };
-        private readonly string[] _requiredMspHubColumns =
-        {
-            "InternalReferenceId", "SkuId", "BillingCycle"
+            "CustomerDomainName", "ProductId", "SkuId", "ChargeType",
+            "Term", "BillingCycle", "ReferenceId"
         };
 
-        // Canonical Microsoft column order used for partner imports
-        private static readonly string[] _microsoftColumns =
+        private static readonly string[] RequiredMicrosoftColumns =
         {
+            "CustomerDomainName", "ProductId", "SkuId",
+            "ChargeType", "TermAndBillingCycle"
+        };
+
+        private static readonly string[] RequiredMspHubColumns =
+        {
+            "ReferenceId", "SkuId", "BillingCycle"
+        };
+
+        /// <summary>
+        /// Canonical Microsoft column order.  
+        /// Extra columns from partner feeds are re‑ordered into this set
+        /// so downstream code can rely on deterministic indexes.
+        /// </summary>
+        private static readonly string[] MicrosoftColumns =
+        {
+            // Core identity / customer
             "PartnerId","CustomerId","CustomerName","CustomerDomainName","CustomerCountry",
-            "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ProductId","SkuId",
-            "AvailabilityId","SkuName","ProductName","ChargeType","UnitPrice","Quantity",
-            "Subtotal","TaxTotal","Total","Currency","PriceAdjustmentDescription",
+            // Commercial identifiers
+            "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ReferenceId",
+            // Product identifiers
+            "ProductId","SkuId","AvailabilityId","SkuName","ProductName",
+            // Financials
+            "ChargeType","UnitPrice","Quantity","Subtotal","TaxTotal","Total","Currency",
+            "PriceAdjustmentDescription",
+            // Metadata
             "PublisherName","PublisherId","SubscriptionDescription","SubscriptionId",
             "ChargeStartDate","ChargeEndDate","TermAndBillingCycle","EffectiveUnitPrice",
             "UnitType","AlternateId","BillableQuantity","BillingFrequency","PricingCurrency",
-            // Additional split columns used as comparison keys
-            "Term","BillingCycle"
+            // Added split columns the matcher expects
+            "Term", "BillingCycle"
         };
 
-        public FileImportService()
-        {
-        }
+        // ─────────────────────────────────────────────────────────────
+        // 2.  ENTRY POINT (AUTO‑DETECT SOURCE)
+        // ─────────────────────────────────────────────────────────────
 
         public DataTable Import(string filePath)
         {
-            var dataView = CsvNormalizer.NormalizeCsv(filePath);
-            var type = SourceTypeDetector.FromFilename(filePath);
-            var normalised = CsvSchemaMapper.Normalize(dataView.Table, type);
+            var table = CsvNormalizer.NormalizeCsv(filePath).Table;
+            var sourceType = SourceTypeDetector.FromFilename(filePath);
+
+            // Map aliases → canonical column names
+            var normalised = CsvSchemaMapper.Normalize(table, sourceType);
             DataQualityValidator.Run(normalised, Path.GetFileName(filePath));
-            if (type == SourceType.Microsoft)
-                SchemaValidator.RequireColumns(normalised, "Microsoft invoice", _requiredMicrosoftColumns);
+
+            // Fail fast if required headers are missing
+            if (sourceType == SourceType.Microsoft)
+                SchemaValidator.RequireColumns(normalised, "Microsoft invoice", RequiredMicrosoftColumns);
             else
-                SchemaValidator.RequireColumns(normalised, "Partner invoice", _requiredMspHubColumns);
-            return normalised;
+                SchemaValidator.RequireColumns(normalised, "MSP Hub invoice", RequiredMspHubColumns);
+
+            // Post‑processing specific to each source
+            return sourceType switch
+            {
+                SourceType.Microsoft => PreprocessMicrosoft(normalised),
+                _ => PreprocessMspHub(normalised)
+            };
         }
 
-        /// <summary>
-        /// Import a Microsoft invoice CSV file.
-        /// </summary>
-        /// <param name="filePath">Path to the CSV file.</param>
-        /// <returns>Normalized DataView.</returns>
-        public DataView ImportMicrosoftInvoice(string filePath)
+        // Keep old public signatures so UI code compiles
+        public DataView ImportMicrosoftInvoice(string filePath) =>
+            PreprocessMicrosoft(CsvSchemaMapper.Normalize(
+                CsvNormalizer.NormalizeCsv(filePath).Table, SourceType.Microsoft)).DefaultView;
+
+        public DataView ImportSixDotOneInvoice(string filePath) =>
+            PreprocessMspHub(CsvSchemaMapper.Normalize(
+                CsvNormalizer.NormalizeCsv(filePath).Table, SourceType.Partner)).DefaultView;
+
+        // ─────────────────────────────────────────────────────────────
+        // 3.  MICROSOFT‑SPECIFIC CLEAN‑UP
+        // ─────────────────────────────────────────────────────────────
+
+        private static DataTable PreprocessMicrosoft(DataTable table)
         {
-            var fileInfo = new FileInfo(filePath);
-            var dataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
-            if (dataView.Table.Rows.Count == 0)
-            {
-                ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
-                throw new ArgumentException("The selected file contains no rows.");
-            }
-            DataQualityValidator.Run(dataView.Table, fileInfo.Name);
-            SchemaValidator.RequireColumns(dataView.Table, "Microsoft invoice", _requiredMicrosoftColumns);
+            if (table.Rows.Count == 0)
+                throw new ArgumentException("The selected Microsoft file contains no rows.");
 
-            for (int i = dataView.Count - 1; i >= 0; i--)
-            {
-                var row = dataView[i].Row;
-                if (SafeGetString(row, "SubscriptionDescription") == "Azure plan")
-                {
-                    dataView.Delete(i);
-                }
-            }
+            // Drop Azure‑plan lines (business rule)
+            DropRows(table, r => Safe(r, "SubscriptionDescription") == "Azure plan");
 
-            if (!dataView.Table.Columns.Contains("Term") || !dataView.Table.Columns.Contains("BillingCycle"))
-            {
-                SplitColumn(dataView.Table, "TermAndBillingCycle", "Term", "BillingCycle");
-            }
+            // Split ‘TermAndBillingCycle’ if the partner feed hasn’t done it for us
+            if (!table.Columns.Contains("Term") || !table.Columns.Contains("BillingCycle"))
+                SplitTermAndCycle(table, "TermAndBillingCycle");
 
-            dataView = ReorderColumns(dataView.Table, _uniqueKeyColumns.Concat(new[] { "TermAndBillingCycle", "BillingFrequency" }).ToArray());
-            return dataView;
+            return ReorderColumns(table, UniqueKeyColumns.Concat(new[]
+                   { "TermAndBillingCycle", "BillingFrequency" }).ToArray());
         }
 
-        /// <summary>
-        /// Import an MSP Hub invoice CSV file.
-        /// </summary>
-        /// <param name="filePath">Path to the CSV file.</param>
-        /// <returns>Normalized DataView.</returns>
-        public DataView ImportSixDotOneInvoice(string filePath)
+        // ─────────────────────────────────────────────────────────────
+        // 4.  MSP‑HUB‑SPECIFIC CLEAN‑UP & MAPPING
+        // ─────────────────────────────────────────────────────────────
+
+        private static DataTable PreprocessMspHub(DataTable table)
         {
-            var fileInfo = new FileInfo(filePath);
-            var dataView = CsvNormalizer.NormalizeCsv(fileInfo.FullName);
-            if (dataView.Table.Rows.Count == 0)
-            {
-                ErrorLogger.LogError(-1, "-", "File is empty", string.Empty, fileInfo.Name, string.Empty);
-                throw new ArgumentException("The selected file contains no rows.");
-            }
+            if (table.Rows.Count == 0)
+                throw new ArgumentException("The selected MSP‑Hub file contains no rows.");
 
-            // Map all columns to Microsoft equivalents before any validation
-            var mapped = MapMspHubColumns(dataView.Table);
-            DataQualityValidator.Run(mapped, fileInfo.Name);
-            SchemaValidator.RequireColumns(mapped, "MSP Hub invoice", _requiredMspHubColumns);
+            // Normalise key fields not handled by CsvSchemaMapper
+            if (table.Columns.Contains("SkuId"))
+                foreach (DataRow row in table.Rows)
+                    row["SkuId"] = Regex.Replace(Safe(row, "SkuId"), @"^0+", ""); // trim leading zeroes
 
-            var view = mapped.DefaultView;
+            ReplaceColumn(table, "ResourceName", "ProductName");
+            ReplaceColumn(table, "ValidFrom", "ChargeStartDate");
+            ReplaceColumn(table, "ValidTo", "ChargeEndDate");
+            ReplaceColumn(table, "PurchaseDate", "OrderDate");
+            ReplaceColumn(table, "PartnerTotal", "Total");
 
-            if (view.Table.Columns.Contains("SkuId"))
-            {
-                foreach (DataRowView rowView in view)
-                {
-                    string skuId = SafeGetString(rowView.Row, "SkuId");
-                    rowView["SkuId"] = skuId.TrimStart('0');
-                }
-            }
+            DropRows(table, r => Safe(r, "ProductName") == "Azure plan");
 
-            if (view.Table.Columns.Contains("ResourceName"))
-                view.Table.Columns["ResourceName"].ColumnName = "ProductName";
+            // Make sure every Microsoft column exists, even if blank, then reorder
+            foreach (var col in MicrosoftColumns.Where(c => !table.Columns.Contains(c)))
+                table.Columns.Add(col, typeof(string));
 
-            for (int i = view.Count - 1; i >= 0; i--)
-            {
-                var row = view[i].Row;
-                if (SafeGetString(row, "ProductName") == "Azure plan")
-                {
-                    view.Delete(i);
-                }
-            }
-
-            if (view.Table.Columns.Contains("ValidFrom"))
-                view.Table.Columns["ValidFrom"].ColumnName = "ChargeStartDate";
-            if (view.Table.Columns.Contains("ValidTo"))
-                view.Table.Columns["ValidTo"].ColumnName = "ChargeEndDate";
-            if (view.Table.Columns.Contains("PurchaseDate"))
-                view.Table.Columns["PurchaseDate"].ColumnName = "OrderDate";
-            if (view.Table.Columns.Contains("PartnerTotal"))
-                view.Table.Columns["PartnerTotal"].ColumnName = "Total";
-
-            view = ReorderColumns(view.Table, _uniqueKeyColumns);
-            return view;
+            return ReorderColumns(table, UniqueKeyColumns);
         }
 
-        /// <summary>
-        /// Map MSP Hub columns to the Microsoft invoice schema.
-        /// Extra columns are discarded and missing ones are added empty so the
-        /// returned table exactly matches the Microsoft column order.
-        /// </summary>
-        private static DataTable MapMspHubColumns(DataTable table)
+        // ─────────────────────────────────────────────────────────────
+        // 5.  HELPERS
+        // ─────────────────────────────────────────────────────────────
+
+        private static void DropRows(DataTable table, Func<DataRow, bool> predicate)
         {
-            DataTable mapped = new();
-            foreach (string col in _microsoftColumns)
-                mapped.Columns.Add(col, typeof(string));
+            for (int i = table.Rows.Count - 1; i >= 0; i--)
+                if (predicate(table.Rows[i])) table.Rows.RemoveAt(i);
+        }
+
+        private static void ReplaceColumn(DataTable table, string oldName, string newName)
+        {
+            if (!table.Columns.Contains(oldName)) return;
+            if (table.Columns.Contains(newName)) table.Columns.Remove(newName);
+            table.Columns[oldName].ColumnName = newName;
+        }
+
+        private static DataTable ReorderColumns(DataTable table, string[] firstColumns)
+        {
+            var newTable = new DataTable();
+
+            // 1️⃣  Desired columns first
+            foreach (var col in firstColumns.Where(table.Columns.Contains))
+                newTable.Columns.Add(col, table.Columns[col].DataType);
+
+            // 2️⃣  Everything else afterwards (preserve original order)
+            foreach (DataColumn c in table.Columns)
+                if (!newTable.Columns.Contains(c.ColumnName))
+                    newTable.Columns.Add(c.ColumnName, c.DataType);
+
+            // Copy data row‑by‑row
+            foreach (DataRow row in table.Rows)
+            {
+                var newRow = newTable.NewRow();
+                foreach (DataColumn col in newTable.Columns)
+                    newRow[col.ColumnName] = row[col.ColumnName];
+                newTable.Rows.Add(newRow);
+            }
+
+            return newTable;
+        }
+
+        private static void SplitTermAndCycle(
+            DataTable table,
+            string sourceColumn = "TermAndBillingCycle",
+            string termColumn = "Term",
+            string cycleColumn = "BillingCycle")
+        {
+            if (!table.Columns.Contains(sourceColumn)) return;
+
+            table.Columns.Add(termColumn, typeof(string));
+            table.Columns.Add(cycleColumn, typeof(string));
 
             foreach (DataRow row in table.Rows)
             {
-                DataRow newRow = mapped.NewRow();
-                foreach (string col in _microsoftColumns)
-                {
-                    newRow[col] = col switch
-                    {
-                        "PartnerId" => SafeGetString(row, "PartnerId"),
-                        "CustomerId" => SafeGetString(row, "CustomerId"),
-                        "CustomerName" => SafeGetString(row, "CustomerName"),
-                        "CustomerDomainName" => SafeGetString(row, "CustomerDomainName"),
-                        "CustomerCountry" => SafeGetString(row, "CustomerCountry"),
-                        "InvoiceNumber" => SafeGetString(row, "PartnerInvoiceNumber"),
-                        "MpnId" => string.Empty,
-                        "Tier2MpnId" => string.Empty,
-                        "OrderId" => SafeGetString(row, "OrderNumber"),
-                        "OrderDate" => SafeGetString(row, "OrderDate"),
-                        "ProductId" => SafeGetString(row, "ProductId"),
-                        "SkuId" => !string.IsNullOrEmpty(SafeGetString(row, "PartNumber"))
-                                        ? SafeGetString(row, "PartNumber")
-                                        : !string.IsNullOrEmpty(SafeGetString(row, "SkuId"))
-                                            ? SafeGetString(row, "SkuId")
-                                            : SafeGetString(row, "SkuName"),
-                        "AvailabilityId" => string.Empty,
-                        "SkuName" => SafeGetString(row, "SkuName"),
-                        "ProductName" =>
-                            !string.IsNullOrEmpty(SafeGetString(row, "ProductName"))
-                                ? SafeGetString(row, "ProductName")
-                                : SafeGetString(row, "ResourceName"),
-                        "ChargeType" => SafeGetString(row, "ChargeType"),
-                        "UnitPrice" => SafeGetString(row, "PartnerUnitPrice"),
-                        "Quantity" => SafeGetString(row, "Quantity"),
-                        "Subtotal" => SafeGetString(row, "PartnerSubTotal"),
-                        "TaxTotal" => SafeGetString(row, "PartnerTaxTotal"),
-                        "Total" => SafeGetString(row, "PartnerTotal"),
-                        "Currency" => SafeGetString(row, "PricingCurrency"),
-                        "PriceAdjustmentDescription" => string.Empty,
-                        "PublisherName" => string.Empty,
-                        "PublisherId" => string.Empty,
-                        "SubscriptionDescription" => string.Empty,
-                        "SubscriptionId" => SafeGetString(row, "SubscriptionId"),
-                        "ChargeStartDate" => SafeGetString(row, "ChargeStartDate"),
-                        "ChargeEndDate" => SafeGetString(row, "ChargeEndDate"),
-                        "TermAndBillingCycle" =>
-                            string.IsNullOrEmpty(SafeGetString(row, "BillingCycle"))
-                                ? SafeGetString(row, "Term")
-                                : $"{SafeGetString(row, "Term")} {SafeGetString(row, "BillingCycle")}",
-                        "EffectiveUnitPrice" => SafeGetString(row, "PartnerEffectiveUnitPrice"),
-                        "UnitType" => string.Empty,
-                        "AlternateId" => string.Empty,
-                        "BillableQuantity" => string.Empty,
-                        "BillingFrequency" => SafeGetString(row, "BillingCycle"),
-                        "PricingCurrency" => SafeGetString(row, "PricingCurrency"),
-                        "Term" => SafeGetString(row, "Term"),
-                        "BillingCycle" => SafeGetString(row, "BillingCycle"),
-                        _ => string.Empty
-                    };
-                }
-                mapped.Rows.Add(newRow);
-            }
+                var composite = Safe(row, sourceColumn);
+                var billing = Safe(row, "BillingFrequency");
 
-            return mapped;
-        }
+                DetermineTermAndBillingCycle(composite, billing,
+                    out string term, out string cycle);
 
-        private static DataView ReorderColumns(DataTable table, string[] columnOrder)
-        {
-            DataTable newTable = new();
-            foreach (string columnName in columnOrder)
-            {
-                if (table.Columns.Contains(columnName))
-                    newTable.Columns.Add(columnName, table.Columns[columnName].DataType);
-            }
-            foreach (DataColumn column in table.Columns)
-            {
-                if (!newTable.Columns.Contains(column.ColumnName))
-                    newTable.Columns.Add(column.ColumnName, column.DataType);
-            }
-            foreach (DataRow row in table.Rows)
-            {
-                DataRow newRow = newTable.Rows.Add();
-                foreach (DataColumn column in newTable.Columns)
-                    newRow[column.ColumnName] = row[column.ColumnName];
-            }
-            return newTable.DefaultView;
-        }
-
-        private static void SplitColumn(DataTable dataTable, string sourceColumnName, string termColumnName, string billingCycleColumnName)
-        {
-            dataTable.Columns.Add(termColumnName, typeof(string));
-            dataTable.Columns.Add(billingCycleColumnName, typeof(string));
-            foreach (DataRow row in dataTable.Rows)
-            {
-                string? termAndBillingCycle = row[sourceColumnName]?.ToString();
-                string billingFrequency = row["BillingFrequency"]?.ToString() ?? string.Empty;
-                DetermineTermAndBillingCycle(termAndBillingCycle, billingFrequency, out string term, out string billingCycle);
-                row[termColumnName] = term;
-                row[billingCycleColumnName] = billingCycle;
+                row[termColumn] = term;
+                row[cycleColumn] = cycle;
             }
         }
 
-        private static void DetermineTermAndBillingCycle(string? termAndBillingCycle, string billingFrequency, out string term, out string billingCycle)
+        private static void DetermineTermAndBillingCycle(
+            string composite, string billing,
+            out string term, out string cycle)
         {
             term = "NA";
-            billingCycle = "NA";
-            switch (termAndBillingCycle)
+            cycle = "NA";
+
+            switch (composite)
             {
                 case "One-Year commitment for monthly/yearly billing":
                     term = "Annual";
-                    billingCycle = string.IsNullOrEmpty(billingFrequency) ? "Annual" : "Monthly";
+                    cycle = string.IsNullOrEmpty(billing) ? "Annual" : "Monthly";
                     break;
-                case "One-Month commitment for monthly billing":
-                    term = "Monthly";
-                    billingCycle = "Monthly";
-                    break;
-                case "Three-3 Years commitment for monthly/3 Years/yearly billing":
-                    term = "Triennial";
-                    billingCycle = "Monthly";
-                    break;
-                case "1 Cache Instance Hour":
-                    term = "Monthly";
-                    billingCycle = "Monthly";
-                    break;
+
                 case "One-Year commitment for yearly billing":
                     term = "Annual";
-                    billingCycle = "Annual";
+                    cycle = "Annual";
                     break;
-                case null or "":
+
+                case "One-Month commitment for monthly billing":
+                case "1 Cache Instance Hour":
+                    term = "Monthly";
+                    cycle = "Monthly";
+                    break;
+
+                case "Three-3 Years commitment for monthly/3 Years/yearly billing":
+                    term = "Triennial";
+                    cycle = "Monthly";
+                    break;
+
+                case "":
+                case null:
                     term = "None";
-                    billingCycle = "OneTime";
+                    cycle = "OneTime";
                     break;
             }
         }
 
-        private static string SafeGetString(DataRow row, string columnName)
-        {
-            if (row == null || string.IsNullOrWhiteSpace(columnName) || !row.Table.Columns.Contains(columnName))
-                return string.Empty;
-            var val = row[columnName];
-            return val == null || val == DBNull.Value ? string.Empty : val.ToString();
-        }
+        private static string Safe(DataRow row, string col) =>
+            row.Table.Columns.Contains(col) && row[col] != DBNull.Value
+                ? row[col]?.ToString() ?? string.Empty
+                : string.Empty;
     }
 }

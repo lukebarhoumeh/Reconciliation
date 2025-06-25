@@ -1,25 +1,46 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>Reconciliation_Tool</RootNamespace>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>Ready.ico</ApplicationIcon>
-    <PackageIcon>Ready.ico</PackageIcon>
-    <AssemblyVersion>4.0.0.8</AssemblyVersion>
-    <FileVersion>4.0.0.8</FileVersion>
-    <PublishSingleFile>true</PublishSingleFile>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="EPPlus" Version="7.6.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+
+	<!-- ─── General build settings ───────────────────────────────────────────── -->
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+
+		<!-- Assembly metadata -->
+		<RootNamespace>Reconciliation_Tool</RootNamespace>
+		<AssemblyVersion>4.0.0.8</AssemblyVersion>
+		<FileVersion>4.0.0.8</FileVersion>
+
+		<!-- Misc. compiler settings -->
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+
+		<!-- Deployment -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+		<!-- Icons -->
+		<ApplicationIcon>Ready.ico</ApplicationIcon>
+		<PackageIcon>Ready.ico</PackageIcon>
+	</PropertyGroup>
+
+	<!-- ─── NuGet packages ──────────────────────────────────────────────────── -->
+	<ItemGroup>
+		<PackageReference Include="EPPlus" Version="7.6.1" />
+	</ItemGroup>
+
+	<!-- ─── Content files copied to output ───────────────────────────────────── -->
+	<ItemGroup>
+		<!-- Configuration -->
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+
+		<!-- Column mapping for CsvSchemaMapper -->
+		<None Update="column-map.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
 </Project>
