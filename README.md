@@ -66,6 +66,9 @@ File.WriteAllText("summary.txt", detector.GetSummary());
 `diff.csv` will contain rows with the left and right values plus a reason for
 each discrepancy.
 
+Discrepancies are ordered by row number and field name in both the on-screen
+table and the exported CSV so the results are easier to scan.
+
 ## Advanced usage
 Use the **Export** menu to save error logs or comparison results.
 The new reconciliation engine loads mapping rules from `column-map.json` and
