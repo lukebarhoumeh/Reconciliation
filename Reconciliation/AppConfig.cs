@@ -83,6 +83,8 @@ namespace Reconciliation
     {
         public decimal ToleranceAmount { get; set; } = 0.01m;
         public decimal ToleranceQuantity { get; set; } = 0.01m;
+        /// <summary>Delta $ amount that marks a row as high-priority.</summary>
+        public decimal HighPriorityThreshold { get; set; } = 20m;
         public decimal PerDayUnitTolerance { get; set; } = 0.05m;
         public string[] CompositeKeys { get; set; } = Array.Empty<string>();
         public string ColumnMapPath { get; set; } = "column-map.json";

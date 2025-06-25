@@ -8,15 +8,16 @@ public class AdvancedReconciliationTests
     private static readonly string[] MsColumns =
     {
         "PartnerId","CustomerId","CustomerName","CustomerDomainName","CustomerCountry",
-        "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ProductId","SkuId",
-        "AvailabilityId","SkuName","ProductName","ChargeType","UnitPrice","Quantity",
-        "Subtotal","TaxTotal","Total","Currency","PriceAdjustmentDescription",
+        "InvoiceNumber","MpnId","Tier2MpnId","OrderId","OrderDate","ReferenceId",
+        "ProductId","SkuId","AvailabilityId","SkuName","ProductName",
+        "ChargeType","UnitPrice","Quantity","Subtotal","TaxTotal","Total","Currency",
+        "PriceAdjustmentDescription",
         "PublisherName","PublisherId","SubscriptionDescription","SubscriptionId",
         "ChargeStartDate","ChargeEndDate","TermAndBillingCycle","EffectiveUnitPrice",
         "UnitType","AlternateId","BillableQuantity","BillingFrequency","PricingCurrency",
         "PCToBCExchangeRate","PCToBCExchangeRateDate","MeterDescription","ReservationOrderId",
-        "CreditReasonCode","SubscriptionStartDate","SubscriptionEndDate","ReferenceId",
-        "ProductQualifiers","PromotionId","ProductCategory"
+        "CreditReasonCode","SubscriptionStartDate","SubscriptionEndDate","ProductQualifiers",
+        "PromotionId","ProductCategory","Term","BillingCycle"
     };
 
     [Fact]
