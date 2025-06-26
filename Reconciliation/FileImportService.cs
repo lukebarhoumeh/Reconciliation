@@ -105,9 +105,8 @@ namespace Reconciliation
             // Drop Azure‑plan lines (business rule)
             DropRows(table, r => Safe(r, "SubscriptionDescription") == "Azure plan");
 
-            // Split ‘TermAndBillingCycle’ if the partner feed hasn’t done it for us
-            if (!table.Columns.Contains("Term") || !table.Columns.Contains("BillingCycle"))
-                SplitTermAndCycle(table, "TermAndBillingCycle");
+            // Normalise term/cycle columns (Normalize adds blanks)
+            SplitTermAndCycle(table, "TermAndBillingCycle");
 
             return ReorderColumns(table, UniqueKeyColumns.Concat(new[]
                    { "TermAndBillingCycle", "BillingFrequency" }).ToArray());
@@ -192,8 +191,10 @@ namespace Reconciliation
         {
             if (!table.Columns.Contains(sourceColumn)) return;
 
-            table.Columns.Add(termColumn, typeof(string));
-            table.Columns.Add(cycleColumn, typeof(string));
+            if (!table.Columns.Contains(termColumn))
+                table.Columns.Add(termColumn, typeof(string));
+            if (!table.Columns.Contains(cycleColumn))
+                table.Columns.Add(cycleColumn, typeof(string));
 
             foreach (DataRow row in table.Rows)
             {
@@ -203,8 +204,10 @@ namespace Reconciliation
                 DetermineTermAndBillingCycle(composite, billing,
                     out string term, out string cycle);
 
-                row[termColumn] = term;
-                row[cycleColumn] = cycle;
+                if (string.IsNullOrEmpty(row[termColumn]?.ToString()))
+                    row[termColumn] = term;
+                if (string.IsNullOrEmpty(row[cycleColumn]?.ToString()))
+                    row[cycleColumn] = cycle;
             }
         }
 
