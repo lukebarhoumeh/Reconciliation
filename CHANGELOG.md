@@ -4,6 +4,7 @@
 - Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
 - Added advanced reconciliation service with composite key grouping and mapping
   via `column-map.json`.
+- Improved button labels, tooltips and grid styling in the main UI for clarity.
 - Invoice validation exposes `InvalidRowsView` for easier binding and tests now reference the UI project.
 - UI option "Advanced Compare" runs the new engine and shows summary details.
 - Validation results now report counts of high and low priority errors with a filter option.
