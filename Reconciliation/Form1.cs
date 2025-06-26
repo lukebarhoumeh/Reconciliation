@@ -32,6 +32,10 @@ namespace Reconciliation
         // flashing log tab
         private readonly WinFormsTimer _flash = new() { Interval = 4000 };
 
+        // factory method so tests can inject a stub
+        protected virtual AdvancedReconciliationService CreateAdvancedService()
+            => new();
+
         // ────────────────────────────────────────────────────────── CTOR
         public Form1()
         {
@@ -115,7 +119,7 @@ namespace Reconciliation
                         MessageBox.Show(@"Import both invoices first."); return;
                     }
 
-                    var svc = new AdvancedReconciliationService();
+                    var svc = CreateAdvancedService();
                     var res = await Task.Run(() =>
                         svc.Reconcile(_msView.Table, _hubView.Table));
 
