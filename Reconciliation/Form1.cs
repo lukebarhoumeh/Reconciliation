@@ -40,6 +40,16 @@ namespace Reconciliation
         public Form1()
         {
             InitializeComponent();
+            ApplyModernTheme(this);
+            titleBar.Paint += (_, e) =>
+            {
+                using var br = new System.Drawing.Drawing2D.LinearGradientBrush(
+                    titleBar.ClientRectangle,
+                    Color.FromArgb(0x00, 0x59, 0xA0),
+                    Color.FromArgb(0x00, 0x7A, 0xCC),
+                    0f);
+                e.Graphics.FillRectangle(br, titleBar.ClientRectangle);
+            };
 
             // If the form is being instantiated inside the WinForms designer
             // skip all run-time-only initialisation to avoid the IUIService error.
@@ -310,6 +320,26 @@ namespace Reconciliation
             g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+        }
+
+        private static void ApplyModernTheme(Control root)
+        {
+            foreach (Control c in root.Controls)
+            {
+                c.Font = new Font("Segoe UI", 11F, c.Font.Style);
+                if (c is Button b)
+                {
+                    b.Height = 34;
+                    b.Padding = new Padding(8, 4, 8, 4);
+                    b.BackColor = Color.FromArgb(0, 122, 204);
+                    b.ForeColor = Color.White;
+                    b.FlatStyle = FlatStyle.Flat;
+                    b.FlatAppearance.BorderSize = 0;
+                }
+                if (c is DataGridView g)
+                    ApplyGridStyle(g);
+                ApplyModernTheme(c);
+            }
         }
         private void dgv_RowPostPaint(object? s, DataGridViewRowPostPaintEventArgs e)
         {

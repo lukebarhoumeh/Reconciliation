@@ -2,6 +2,7 @@
 MSP HUB RECONCILATION TOOL
 
 The UI now embeds MSP Hub and Microsoft logos directly from application resources.
+The WinForms interface uses a modern layout with responsive tables and large buttons for 4K displays.
 
 ## CSV Normalization
 The application now uses `CsvNormalizer` to clean imported CSV files and `ErrorLogger` to store parsing errors and warnings. Validation errors are exported as structured CSV files for easy review.

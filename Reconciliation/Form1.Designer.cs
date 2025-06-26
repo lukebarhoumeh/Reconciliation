@@ -18,7 +18,12 @@ namespace Reconciliation
         private Button btnClose;
         private Button btnMinimise;
 
-        private SplitContainer splitMain;
+        private TableLayoutPanel layoutValidation;
+        private TableLayoutPanel layoutControls;
+        private FlowLayoutPanel flowModes;
+        private FlowLayoutPanel flowRunButtons;
+        private FlowLayoutPanel flowImports;
+        private FlowLayoutPanel flowFilters;
         private TabControl tabs;
         private TabPage tabValidation;
         private TabPage tabPrices;
@@ -42,12 +47,17 @@ namespace Reconciliation
         private CheckBox chkHPOnly;
         private Label lblEmpty;
 
+        private TableLayoutPanel layoutPrices;
+        private FlowLayoutPanel flowPriceTop;
+
         // ── Price‑mismatch tab
         private DataGridView dgvPrices;
         private Button btnExportPrices;
         private Label lblPriceInfo;
 
         // ── Logs tab
+        private TableLayoutPanel layoutLogs;
+        private FlowLayoutPanel flowLogTop;
         private DataGridView dgvLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;
@@ -111,14 +121,32 @@ namespace Reconciliation
             titleBar.Controls.AddRange(new Control[]
                 { btnMinimise, btnClose, lblVersion, lblTitle });
 
-            // ===== MAIN SPLITTER =============================================
-            splitMain = new SplitContainer
+            // ===== LAYOUT CONTAINERS ========================================
+            layoutValidation = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal
+                ColumnCount = 1,
+                RowCount = 2
             };
-            splitMain.Panel1.Padding = new Padding(12);
-            splitMain.SplitterDistance = 260;
+            layoutValidation.RowStyles.Add(new RowStyle(SizeType.Percent, 26F));
+            layoutValidation.RowStyles.Add(new RowStyle(SizeType.Percent, 74F));
+
+            layoutControls = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 4,
+                Padding = new Padding(12)
+            };
+            layoutControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
+            layoutControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+            for (int i = 0; i < 4; i++)
+                layoutControls.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            flowModes = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+            flowRunButtons = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+            flowImports = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+            flowFilters = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
 
             // ===== TABS =======================================================
             tabs = new TabControl
@@ -171,44 +199,24 @@ namespace Reconciliation
                 Enabled = false,
                 Location = new Point(500, 50)
             };
-            btnExport = new Button
-            {
-                Text = "Export",
-                Enabled = false,
-                Location = new Point(500, 90)
-            };
+            btnExport = new Button { Text = "Export", Enabled = false };
 
-            lblHubInfo = new Label { AutoSize = true, Location = new Point(10, 110) };
-            lblMsInfo = new Label { AutoSize = true, Location = new Point(10, 130) };
+            lblHubInfo = new Label { AutoSize = true };
+            lblMsInfo = new Label { AutoSize = true };
 
             lblSummary = new Label
             {
                 AutoSize = true,
-                Location = new Point(10, 160),
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
 
-            cmbFieldFilter = new ComboBox
-            {
-                Width = 180,
-                Location = new Point(700, 10),
-                DropDownStyle = ComboBoxStyle.DropDown
-            };
-            txtExplanationFilter = new TextBox
-            {
-                Width = 180,
-                Location = new Point(700, 45)
-            };
-            chkHPOnly = new CheckBox
-            {
-                Text = "High‑priority only",
-                Location = new Point(700, 75)
-            };
+            cmbFieldFilter = new ComboBox { Width = 180, DropDownStyle = ComboBoxStyle.DropDown };
+            txtExplanationFilter = new TextBox { Width = 180 };
+            chkHPOnly = new CheckBox { Text = "High‑priority only" };
 
             lblEmpty = new Label
             {
                 AutoSize = true,
-                Location = new Point(500, 200),
                 ForeColor = Color.DimGray,
                 Visible = false
             };
@@ -226,93 +234,103 @@ namespace Reconciliation
             btnReset.Click += btnReset_Click;
             btnExport.Click += btnExport_Click;
 
-            splitMain.Panel1.Controls.AddRange(new Control[] {
-                rbCompare, rbValidate, rbAdvanced,
-                btnImportHub, btnImportMicrosoft,
-                btnRun, btnReset, btnExport,
-                lblHubInfo, lblMsInfo, lblSummary, lblEmpty,
-                cmbFieldFilter, txtExplanationFilter, chkHPOnly
-            });
+flowModes.Controls.AddRange(new Control[] { rbCompare, rbValidate, rbAdvanced });
+flowRunButtons.Controls.AddRange(new Control[] { btnRun, btnReset, btnExport });
+flowImports.Controls.AddRange(new Control[] { btnImportMicrosoft, lblMsInfo, btnImportHub, lblHubInfo });
+flowFilters.Controls.AddRange(new Control[] { cmbFieldFilter, txtExplanationFilter, chkHPOnly });
 
-            // === Validation results grid (Panel2) =============================
-            dgvResults = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
-                Visible = false
-            };
-            splitMain.Panel2.Controls.Add(dgvResults);
+layoutControls.Controls.Add(flowModes, 0, 0);
+layoutControls.Controls.Add(flowRunButtons, 1, 0);
+layoutControls.Controls.Add(flowImports, 0, 1);
+layoutControls.SetColumnSpan(flowImports, 2);
+layoutControls.Controls.Add(lblSummary, 0, 2);
+layoutControls.SetColumnSpan(lblSummary, 2);
+layoutControls.Controls.Add(flowFilters, 0, 3);
+layoutControls.SetColumnSpan(flowFilters, 2);
 
-            tabValidation.Controls.Add(splitMain);
+// === Validation results grid ===================================
+dgvResults = new DataGridView
+{
+    Dock = DockStyle.Fill,
+    ReadOnly = true,
+    AllowUserToAddRows = false,
+    AllowUserToDeleteRows = false,
+    RowHeadersVisible = false,
+    Visible = false
+};
+var pnlResults = new Panel { Dock = DockStyle.Fill };
+pnlResults.Controls.AddRange(new Control[] { dgvResults, lblEmpty });
 
-            // ===== Price‑mismatch TAB =========================================
-            dgvPrices = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false
-            };
-            btnExportPrices = new Button
-            {
-                Text = "Export …",
-                Enabled = false,
-                Dock = DockStyle.Top
-            };
-            btnExportPrices.Click += btnExportPrices_Click;
-            lblPriceInfo = new Label
-            {
-                Text = "No price mismatches.",
-                AutoSize = true,
-                Dock = DockStyle.Top
-            };
-            tabPrices.Controls.AddRange(
-                new Control[] { dgvPrices, btnExportPrices, lblPriceInfo });
+layoutValidation.Controls.Add(layoutControls, 0, 0);
+layoutValidation.Controls.Add(pnlResults, 0, 1);
 
-            // ===== Logs TAB ====================================================
-            dgvLogs = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false
-            };
-            dgvLogs.DataBindingComplete += dgvLogs_DataBindingComplete;
-            btnExportLogs = new Button
-            {
-                Text = "Export log",
-                Enabled = false,
-                Dock = DockStyle.Top
-            };
-            btnResetLogs = new Button
-            {
-                Text = "Clear log",
-                Enabled = false,
-                Dock = DockStyle.Top
-            };
-            btnExportLogs.Click += btnExportLogs_Click;
-            btnResetLogs.Click += btnResetLogs_Click;
-            lblLogsSummary = new Label
-            {
-                Text = "⚠ 0 warnings, 0 errors",
-                AutoSize = true,
-                Dock = DockStyle.Top
-            };
-            txtRawLog = new RichTextBox
-            {
-                Dock = DockStyle.Bottom,
-                Height = 200,
-                ReadOnly = true
-            };
+tabValidation.Controls.Add(layoutValidation);
 
-            tabLogs.Controls.AddRange(new Control[]
-            { txtRawLog, dgvLogs, lblLogsSummary, btnResetLogs, btnExportLogs });
+// ===== Price‑mismatch TAB ========================================
+layoutPrices = new TableLayoutPanel
+{
+    Dock = DockStyle.Fill,
+    ColumnCount = 1,
+    RowCount = 2
+};
+layoutPrices.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+layoutPrices.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
+flowPriceTop = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+
+dgvPrices = new DataGridView
+{
+    Dock = DockStyle.Fill,
+    ReadOnly = true,
+    AllowUserToAddRows = false,
+    AllowUserToDeleteRows = false,
+    RowHeadersVisible = false
+};
+btnExportPrices = new Button { Text = "Export …", Enabled = false };
+btnExportPrices.Click += btnExportPrices_Click;
+lblPriceInfo = new Label { Text = "No price mismatches.", AutoSize = true };
+
+flowPriceTop.Controls.AddRange(new Control[] { btnExportPrices, lblPriceInfo });
+layoutPrices.Controls.Add(flowPriceTop, 0, 0);
+layoutPrices.Controls.Add(dgvPrices, 0, 1);
+
+tabPrices.Controls.Add(layoutPrices);
+
+// ===== Logs TAB ================================================
+layoutLogs = new TableLayoutPanel
+{
+    Dock = DockStyle.Fill,
+    ColumnCount = 1,
+    RowCount = 3
+};
+layoutLogs.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+layoutLogs.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+layoutLogs.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+
+flowLogTop = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+
+dgvLogs = new DataGridView
+{
+    Dock = DockStyle.Fill,
+    ReadOnly = true,
+    AllowUserToAddRows = false,
+    AllowUserToDeleteRows = false,
+    RowHeadersVisible = false
+};
+dgvLogs.DataBindingComplete += dgvLogs_DataBindingComplete;
+btnExportLogs = new Button { Text = "Export log", Enabled = false };
+btnResetLogs = new Button { Text = "Clear log", Enabled = false };
+btnExportLogs.Click += btnExportLogs_Click;
+btnResetLogs.Click += btnResetLogs_Click;
+lblLogsSummary = new Label { Text = "⚠ 0 warnings, 0 errors", AutoSize = true };
+txtRawLog = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true };
+
+flowLogTop.Controls.AddRange(new Control[] { btnExportLogs, btnResetLogs, lblLogsSummary });
+layoutLogs.Controls.Add(flowLogTop, 0, 0);
+layoutLogs.Controls.Add(dgvLogs, 0, 1);
+layoutLogs.Controls.Add(txtRawLog, 0, 2);
+
+tabLogs.Controls.Add(layoutLogs);
             // ===== MAIN FORM ===================================================
             ClientSize = new Size(1280, 800);
             Controls.AddRange(new Control[] { tabs, titleBar });

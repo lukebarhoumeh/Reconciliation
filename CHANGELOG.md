@@ -17,6 +17,7 @@
 - Implemented structured error logging with CSV export including row numbers and context.
 - Added DataQualityValidator for comprehensive invoice checks.
 - Updated UI to use new ErrorLogger.Entries collection instead of removed Errors property.
+- Modernised WinForms interface with responsive layout and theme.
 - Enforced required schema columns for Microsoft and MSP Hub invoices.
 - Flexible schema validation now auto-maps common column variants (e.g. `SkuName` to `SkuId`) and suggests alternatives when a column is missing.
 - MSP Hub and Microsoft logos are embedded via resources and shown in the main form.
