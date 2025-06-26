@@ -135,9 +135,9 @@ namespace Reconciliation
 
                     _resultView = res.Exceptions.DefaultView;
                     lblSummary.Text =
-                        $@"Unmatched groups: {res.Summary.UnmatchedGroups}   " +
-                        $@"Over‑bill: {NumericFormatter.Money(res.Summary.OverBill)}   " +
-                        $@"Under‑bill: {NumericFormatter.Money(res.Summary.UnderBill)}";
+                        $@"Unmatched groups: {res.Summary.UnmatchedGroups}   " +
+                        $@"Over-bill: {NumericFormatter.Money(res.Summary.OverBill)}   " +
+                        $@"Under-bill: {NumericFormatter.Money(res.Summary.UnderBill)}";
                 }
                 else                                // ── single‑file validation
                 {
@@ -152,7 +152,7 @@ namespace Reconciliation
 
                     _resultView = val.InvalidRowsView;
                     lblSummary.Text =
-                        $@"High: {val.HighPriority}   Low: {val.LowPriority}";
+                        $@"High priority: {val.HighPriority}   Low priority: {val.LowPriority}";
                 }
 
                 BindResult();
@@ -316,6 +316,9 @@ namespace Reconciliation
             g.EnableHeadersVisualStyles = false;
             g.BackgroundColor = Color.White;
             g.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            g.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
+            g.BorderStyle = BorderStyle.FixedSingle;
+            g.GridColor = Color.LightGray;
             g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 122, 204);
             g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);

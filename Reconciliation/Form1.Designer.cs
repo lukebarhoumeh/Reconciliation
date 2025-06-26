@@ -17,6 +17,7 @@ namespace Reconciliation
         private Label lblVersion;      //  ← NEW (fixes missing symbol)
         private Button btnClose;
         private Button btnMinimise;
+        private ToolTip toolTip1;
 
         private TableLayoutPanel layoutValidation;
         private TableLayoutPanel layoutControls;
@@ -68,6 +69,7 @@ namespace Reconciliation
         private void InitializeComponent()
         {
             components = new Container();
+            toolTip1 = new ToolTip(components);
 
             // ===== TITLE BAR ==================================================
             titleBar = new Panel
@@ -162,7 +164,7 @@ namespace Reconciliation
             // === Validation controls (Panel1) =================================
             rbCompare = new RadioButton
             {
-                Text = "Compare invoices",
+                Text = "Compare Microsoft vs MSP Hub",
                 Location = new Point(10, 10)
             };
             rbValidate = new RadioButton
@@ -178,14 +180,16 @@ namespace Reconciliation
 
             btnImportHub = new Button
             {
-                Text = "Import MSP‑Hub CSV",
+                Text = "Import MSP Hub invoice",
                 Location = new Point(230, 10)
             };
+            toolTip1.SetToolTip(btnImportHub, "Load MSP Hub invoice (CSV)");
             btnImportMicrosoft = new Button
             {
-                Text = "Import Microsoft CSV",
+                Text = "Import Microsoft invoice",
                 Location = new Point(230, 50)
             };
+            toolTip1.SetToolTip(btnImportMicrosoft, "Load Microsoft invoice (CSV)");
 
             btnRun = new Button
             {
@@ -193,13 +197,16 @@ namespace Reconciliation
                 Enabled = false,
                 Location = new Point(500, 10)
             };
+            toolTip1.SetToolTip(btnRun, "Start reconciliation");
             btnReset = new Button
             {
                 Text = "Reset",
                 Enabled = false,
                 Location = new Point(500, 50)
             };
-            btnExport = new Button { Text = "Export", Enabled = false };
+            toolTip1.SetToolTip(btnReset, "Clear loaded data");
+            btnExport = new Button { Text = "Export Results", Enabled = false };
+            toolTip1.SetToolTip(btnExport, "Save results to Excel");
 
             lblHubInfo = new Label { AutoSize = true };
             lblMsInfo = new Label { AutoSize = true };
@@ -212,7 +219,7 @@ namespace Reconciliation
 
             cmbFieldFilter = new ComboBox { Width = 180, DropDownStyle = ComboBoxStyle.DropDown };
             txtExplanationFilter = new TextBox { Width = 180 };
-            chkHPOnly = new CheckBox { Text = "High‑priority only" };
+            chkHPOnly = new CheckBox { Text = "High Priority Only" };
 
             lblEmpty = new Label
             {
@@ -288,6 +295,7 @@ dgvPrices = new DataGridView
 };
 btnExportPrices = new Button { Text = "Export …", Enabled = false };
 btnExportPrices.Click += btnExportPrices_Click;
+toolTip1.SetToolTip(btnExportPrices, "Export price mismatches");
 lblPriceInfo = new Label { Text = "No price mismatches.", AutoSize = true };
 
 flowPriceTop.Controls.AddRange(new Control[] { btnExportPrices, lblPriceInfo });
@@ -322,6 +330,8 @@ btnExportLogs = new Button { Text = "Export log", Enabled = false };
 btnResetLogs = new Button { Text = "Clear log", Enabled = false };
 btnExportLogs.Click += btnExportLogs_Click;
 btnResetLogs.Click += btnResetLogs_Click;
+toolTip1.SetToolTip(btnExportLogs, "Export logs to CSV");
+toolTip1.SetToolTip(btnResetLogs, "Clear all log entries");
 lblLogsSummary = new Label { Text = "⚠ 0 warnings, 0 errors", AutoSize = true };
 txtRawLog = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true };
 
