@@ -98,7 +98,7 @@ public class ReconciliationOptions
 
     /// <summary>Columns that compose the unique business key for grouping.</summary>
     public string[] CompositeKeys { get; set; } =
-        { "CustomerDomainName","ProductId","SkuId","ChargeType","Term","BillingCycle","ReferenceId" };
+        { "InvoiceNumber", "SkuId" };
 
     /// <summary>Relative or absolute path to the column‑alias map.</summary>
     public string ColumnMapPath { get; set; } = "column-map.json";
