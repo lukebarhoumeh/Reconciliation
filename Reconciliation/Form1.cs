@@ -1878,10 +1878,3 @@ namespace Reconciliation
 
     }// <--- THIS IS THE ONLY closing brace for Form1
 }
-
-
-            ws.Cells[ws.Dimension.Address].AutoFitColumns();
-            pkg.SaveAs(new FileInfo(file));
-        }
-    }
-}
