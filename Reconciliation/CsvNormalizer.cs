@@ -3,11 +3,16 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace Reconciliation
 {
     public static class CsvNormalizer
     {
+        private static readonly HashSet<string> NumericColumns = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "UnitPrice", "EffectiveUnitPrice", "Quantity", "Subtotal", "TaxTotal", "Total"
+        };
         public static DataView NormalizeCsv(string filePath)
         {
             using var parser = new TextFieldParser(filePath);
@@ -107,9 +112,7 @@ namespace Reconciliation
 
         private static bool IsNumericColumn(string name)
         {
-            name = name.ToLowerInvariant();
-            string[] hints = { "price", "amount", "quantity", "total", "unit", "rate" };
-            return hints.Any(h => name.Contains(h));
+            return NumericColumns.Contains(name);
         }
 
         private static bool IsDateColumn(string name)

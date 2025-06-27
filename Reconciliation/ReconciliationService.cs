@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Globalization;
 
 namespace Reconciliation
 {
@@ -102,13 +103,30 @@ namespace Reconciliation
         {
             var r = table.NewRow();
             r["Row Number"] = row;
-            r["Field Name"] = key;
-            r["Our Value"] = string.Empty;
+            r["Field Name"] = "Row";
+            r["Our Value"] = key;
             r["Microsoft Value"] = string.Empty;
             r["Explanation"] = message;
             r["Suggested Action"] = string.Empty;
             r["Reason"] = message;
             table.Rows.Add(r);
+        }
+
+        public static bool TryParseMoney(string s, out decimal d)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                d = 0m;
+                return true;
+            }
+            return decimal.TryParse(
+                s,
+                NumberStyles.AllowDecimalPoint |
+                NumberStyles.AllowLeadingSign |
+                NumberStyles.AllowExponent |
+                NumberStyles.AllowTrailingSign,
+                CultureInfo.InvariantCulture,
+                out d);
         }
 
         private static string Key(DataRow row)
@@ -126,7 +144,7 @@ namespace Reconciliation
         {
             a = a.Trim();
             b = b.Trim();
-            if (decimal.TryParse(a, out var da) && decimal.TryParse(b, out var db))
+            if (TryParseMoney(a, out var da) && TryParseMoney(b, out var db))
             {
                 return Math.Abs(da - db) <= AppConfig.Validation.NumericTolerance;
             }

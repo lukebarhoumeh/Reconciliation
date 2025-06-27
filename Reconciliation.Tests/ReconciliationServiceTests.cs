@@ -117,5 +117,24 @@ namespace Reconciliation.Tests
             Assert.All(result.Rows.Cast<DataRow>(), r =>
                 Assert.Contains("Hub row", r["Explanation"].ToString()));
         }
+
+        [Fact]
+        public void TryParseMoney_ParsesScientificNotation()
+        {
+            bool ok = ReconciliationService.TryParseMoney("0E-20", out var d);
+            Assert.True(ok);
+            Assert.Equal(0m, d);
+        }
+
+        [Fact]
+        public void BlankTaxTotal_DoesNotLogError()
+        {
+            var table = new DataTable();
+            table.Columns.Add("TaxTotal");
+            table.Rows.Add("");
+            ErrorLogger.Clear();
+            CsvNormalizer.NormalizeDataTable(table);
+            Assert.Empty(ErrorLogger.Entries);
+        }
     }
 }
