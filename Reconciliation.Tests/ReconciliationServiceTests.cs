@@ -85,5 +85,37 @@ namespace Reconciliation.Tests
             Assert.Contains("TaxTotal", fields);
             Assert.Contains("Total", fields);
         }
+
+        [Fact]
+        public void CompareInvoices_HandlesDuplicateKeys()
+        {
+            var hub = CreateMspHubTable();
+            // two MSPHub rows with the same InvoiceNumber and SkuId
+            hub.Rows.Add(
+                "INV1","Cust","cust.com","p1","Prod","s1","Usage","2024-01-01","2024-01-31",
+                "1","1","2024-01-01","T","M","1","1","2024-01-01","2024-01-31","1",
+                "5","1","5","0","10","30","1","30","1");
+            hub.Rows.Add(
+                "INV1","Cust","cust.com","p1","Prod","s1","Usage","2024-01-01","2024-01-31",
+                "1","2","2024-01-01","T","M","10","8","2024-01-01","2024-01-31","2",
+                "7","1","7","1","7","30","1","30","1");
+
+            var ms = CreateMicrosoftTable();
+            // two Microsoft rows with the same key
+            ms.Rows.Add(
+                "INV1","Cust","cust.com","p1","Prod","s1","Usage","2024-01-01","2024-01-31",
+                "1","1","2024-01-01","T","M","2024-01-01","2024-01-31","5","0","10","Service");
+            ms.Rows.Add(
+                "INV1","Cust","cust.com","p1","Prod","s1","Usage","2024-01-01","2024-01-31",
+                "1","1","2024-01-01","T","M","2024-01-01","2024-01-31","5","0","10","Service");
+
+            var svc = new ReconciliationService();
+            var result = svc.CompareInvoices(hub, ms);
+
+            // Second hub row mismatches all four comparable fields against each Microsoft row
+            Assert.Equal(8, result.Rows.Count);
+            Assert.All(result.Rows.Cast<DataRow>(), r =>
+                Assert.Contains("Hub row", r["Explanation"].ToString()));
+        }
     }
 }

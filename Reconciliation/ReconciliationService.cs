@@ -22,50 +22,62 @@ namespace Reconciliation
 
             var fields = new[] { "UnitPrice", "Quantity", "Subtotal", "TaxTotal", "Total" };
 
-            // Build lookups keyed by InvoiceNumber and SkuId (case-insensitive)
-            var hub = sixDotOne.Rows.Cast<DataRow>().ToDictionary(
-                r => Key(r), StringComparer.OrdinalIgnoreCase);
-            var ms = microsoft.Rows.Cast<DataRow>().ToDictionary(
-                r => Key(r), StringComparer.OrdinalIgnoreCase);
+            // Duplicate InvoiceNumber/SkuId combinations may exist in the invoice
+            // files, so we group rows by this composite key and compare lists of
+            // rows rather than assuming a single match on each side.
+            var hub = sixDotOne.Rows.Cast<DataRow>()
+                .GroupBy(r => Key(r), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+            var ms = microsoft.Rows.Cast<DataRow>()
+                .GroupBy(r => Key(r), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
             var result = BuildResultTable();
             int row = 1;
 
-            foreach (var key in hub.Keys.Union(ms.Keys))
+            foreach (var key in hub.Keys.Union(ms.Keys, StringComparer.OrdinalIgnoreCase))
             {
-                hub.TryGetValue(key, out var hubRow);
-                ms.TryGetValue(key, out var msRow);
+                hub.TryGetValue(key, out var hubRows);
+                ms.TryGetValue(key, out var msRows);
 
-                if (hubRow == null)
+                if (hubRows == null)
                 {
                     AddMissingRow(result, row++, "Missing in MSPHub", key);
                     continue;
                 }
-                if (msRow == null)
+                if (msRows == null)
                 {
                     AddMissingRow(result, row++, "Missing in Microsoft", key);
                     continue;
                 }
 
-                foreach (var f in fields)
+                foreach (var hubRow in hubRows)
                 {
-                    if (!hubRow.Table.Columns.Contains(f) || !msRow.Table.Columns.Contains(f))
-                        continue;
+                    int hubIndex = hubRow.Table.Rows.IndexOf(hubRow) + 1;
+                    foreach (var msRow in msRows)
+                    {
+                        int msIndex = msRow.Table.Rows.IndexOf(msRow) + 1;
+                        foreach (var f in fields)
+                        {
+                            if (!hubRow.Table.Columns.Contains(f) || !msRow.Table.Columns.Contains(f))
+                                continue;
 
-                    string a = Convert.ToString(hubRow[f]) ?? string.Empty;
-                    string b = Convert.ToString(msRow[f]) ?? string.Empty;
-                    if (ValuesEqual(a, b))
-                        continue;
+                            string a = Convert.ToString(hubRow[f]) ?? string.Empty;
+                            string b = Convert.ToString(msRow[f]) ?? string.Empty;
+                            if (ValuesEqual(a, b))
+                                continue;
 
-                    var r = result.NewRow();
-                    r["Row Number"] = row++;
-                    r["Field Name"] = FriendlyNameMap.Get(f);
-                    r["Our Value"] = a;
-                    r["Microsoft Value"] = b;
-                    r["Explanation"] = $"Mismatch in {f}";
-                    r["Suggested Action"] = string.Empty;
-                    r["Reason"] = string.Empty;
-                    result.Rows.Add(r);
+                            var r = result.NewRow();
+                            r["Row Number"] = row++;
+                            r["Field Name"] = FriendlyNameMap.Get(f);
+                            r["Our Value"] = a;
+                            r["Microsoft Value"] = b;
+                            r["Explanation"] = $"Mismatch in {f} (Hub row {hubIndex}, MS row {msIndex})";
+                            r["Suggested Action"] = string.Empty;
+                            r["Reason"] = string.Empty;
+                            result.Rows.Add(r);
+                        }
+                    }
                 }
             }
 
