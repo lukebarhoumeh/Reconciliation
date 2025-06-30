@@ -26,11 +26,7 @@ public class BusinessKeyReconciliationService
 
     private static readonly string[] FinancialColumns =
     {
-        "UnitPrice","EffectiveUnitPrice","MSRP","MSRPPrice","Subtotal","TaxTotal","Total","Quantity",
-        "PartnerDiscountPercentage","PartnerDiscount","PartnerSubTotal","PartnerTotal",
-        "CustomerUnitPrice","CustomerEffectiveUnitPrice","CustomerSubTotal","CustomerTotal",
-        "CustomerDiscountPercentage","CustomerDiscount",
-        "EffectiveMSRP","PartnerUnitPrice","PartnerPerDayUnitPrice","CustomerPerDayUnitPrice"
+        "UnitPrice","EffectiveUnitPrice","Subtotal","TaxTotal","Total","Quantity"
     };
 
     /// <summary>Summary of the last reconciliation run.</summary>
@@ -55,7 +51,7 @@ public class BusinessKeyReconciliationService
             .ToArray();
 
         var result = BuildResultTable();
-        int missingCount = 0, mismatchCount = 0;
+        int onlyMsphub = 0, onlyMicrosoft = 0, mismatchCount = 0, perfect = 0;
 
         foreach (var key in oursGroups.Keys.Union(msGroups.Keys))
         {
@@ -67,7 +63,7 @@ public class BusinessKeyReconciliationService
                 foreach (var msr in msRows!)
                 {
                     AddMissingRow(result, BuildFullKey(msr), "Missing in MSPUP");
-                    missingCount++;
+                    onlyMicrosoft++;
                 }
                 continue;
             }
@@ -76,7 +72,7 @@ public class BusinessKeyReconciliationService
                 foreach (var or in oursRows)
                 {
                     AddMissingRow(result, BuildFullKey(or), "Missing in Microsoft");
-                    missingCount++;
+                    onlyMsphub++;
                 }
                 continue;
             }
@@ -89,13 +85,14 @@ public class BusinessKeyReconciliationService
                 if (idx == -1)
                 {
                     AddMissingRow(result, BuildFullKey(or), "Missing in Microsoft");
-                    missingCount++;
+                    onlyMsphub++;
                     continue;
                 }
 
                 var msr = msRemaining[idx];
                 msRemaining.RemoveAt(idx);
 
+                bool mismatch = false;
                 foreach (var field in sharedFields)
                 {
                     var a = Convert.ToString(or[field]) ?? string.Empty;
@@ -103,16 +100,18 @@ public class BusinessKeyReconciliationService
                     if (ValuesEqual(a, b)) continue;
                     AddMismatchRow(result, BuildFullKey(or), field, a, b);
                     mismatchCount++;
+                    mismatch = true;
                 }
+                if (!mismatch) perfect++;
             }
             foreach (var msr in msRemaining)
             {
                 AddMissingRow(result, BuildFullKey(msr), "Missing in MSPUP");
-                missingCount++;
+                onlyMicrosoft++;
             }
         }
 
-        LastSummary = $"Compared {ours.Rows.Count} MSP rows vs {microsoft.Rows.Count} MS rows – {missingCount} keys missing, {mismatchCount} value mismatches";
+        LastSummary = $"Perfect: {perfect} | OnlyMSP: {onlyMsphub} | OnlyMS: {onlyMicrosoft} | Diff: {mismatchCount}";
         return result;
     }
 
@@ -139,7 +138,7 @@ public class BusinessKeyReconciliationService
             Value(row,"CustomerDomainName"),
             Value(row,"ProductId"),
             Value(row,"ChargeType"),
-            Value(row,"SubscriptionId")
+            SubscriptionValue(row)
         });
     }
 
@@ -150,14 +149,25 @@ public class BusinessKeyReconciliationService
             Value(row,"ProductId"),
             Value(row,"ChargeType"),
             DateTime.TryParse(Convert.ToString(row["ChargeStartDate"]), out var d) ? d.ToString("yyyy-MM-dd") : Value(row,"ChargeStartDate"),
-            Value(row,"SubscriptionId")
+            SubscriptionValue(row)
         });
     }
 
     private static bool HasValidKey(DataRow row)
     {
-        return new[] { "CustomerDomainName", "ProductId", "ChargeType", "ChargeStartDate", "SubscriptionId" }
+        var basics = new[] { "CustomerDomainName", "ProductId", "ChargeType", "ChargeStartDate" }
             .All(c => row.Table.Columns.Contains(c) && !string.IsNullOrWhiteSpace(Convert.ToString(row[c])));
+        if (!basics) return false;
+        string sub = SubscriptionValue(row);
+        return !string.IsNullOrEmpty(sub);
+    }
+
+    private static string SubscriptionValue(DataRow row)
+    {
+        string val = row.Table.Columns.Contains("SubscriptionId") ? Value(row,"SubscriptionId") : string.Empty;
+        if (string.IsNullOrEmpty(val) && row.Table.Columns.Contains("SubscriptionGuid"))
+            val = Value(row,"SubscriptionGuid");
+        return val;
     }
 
     private static string Value(DataRow row, string column)
