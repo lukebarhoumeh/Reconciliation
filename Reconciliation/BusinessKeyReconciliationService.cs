@@ -2,179 +2,225 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 
-namespace Reconciliation
+namespace Reconciliation;
+
+/// <summary>
+/// Provides strict business key reconciliation between two invoices.
+/// Keys are matched on CustomerDomainName, ProductId, ChargeType,
+/// ChargeStartDate (±1 day tolerance) and SubscriptionId. Only financial
+/// columns present in both tables are compared.
+/// </summary>
+public class BusinessKeyReconciliationService
 {
-    /// <summary>
-    /// Reconciles two invoice tables using a fixed composite business key and
-    /// compares only specified financial columns with tolerance.
-    /// </summary>
-    public class BusinessKeyReconciliationService
+    private readonly string[] _keyColumns =
     {
-        private static readonly string[] KeyColumns =
+        "CustomerDomainName",
+        "ProductId",
+        "ChargeType",
+        "ChargeStartDate",
+        "SubscriptionId"
+    };
+
+    private static readonly string[] FinancialColumns =
+    {
+        "UnitPrice","EffectiveUnitPrice","MSRP","MSRPPrice","Subtotal","TaxTotal","Total","Quantity",
+        "PartnerDiscountPercentage","PartnerDiscount","PartnerSubTotal","PartnerTotal",
+        "CustomerUnitPrice","CustomerEffectiveUnitPrice","CustomerSubTotal","CustomerTotal",
+        "CustomerDiscountPercentage","CustomerDiscount",
+        "EffectiveMSRP","PartnerUnitPrice","PartnerPerDayUnitPrice","CustomerPerDayUnitPrice"
+    };
+
+    /// <summary>Summary of the last reconciliation run.</summary>
+    public string LastSummary { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Reconcile two invoice tables.
+    /// </summary>
+    public DataTable Reconcile(DataTable ours, DataTable microsoft)
+    {
+        if (ours == null) throw new ArgumentNullException(nameof(ours));
+        if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
+
+        CsvPreProcessor.Process(ours);
+        CsvPreProcessor.Process(microsoft);
+
+        var oursGroups = BuildGroups(ours);
+        var msGroups = BuildGroups(microsoft);
+
+        var sharedFields = FinancialColumns.Where(f =>
+                ours.Columns.Contains(f) && microsoft.Columns.Contains(f))
+            .ToArray();
+
+        var result = BuildResultTable();
+        int missingCount = 0, mismatchCount = 0;
+
+        foreach (var key in oursGroups.Keys.Union(msGroups.Keys))
         {
-            "CustomerDomainName",
-            "ProductId",
-            "ChargeType",
-            "ChargeStartDate",
-            "SubscriptionId"
-        };
+            oursGroups.TryGetValue(key, out var oursRows);
+            msGroups.TryGetValue(key, out var msRows);
 
-        private static readonly string[] FinancialColumns =
-        {
-            "UnitPrice","EffectiveUnitPrice","MSRP","MSRPPrice","Subtotal","TaxTotal","Total","Quantity",
-            "PartnerDiscountPercentage","PartnerDiscount","PartnerSubTotal","PartnerTotal",
-            "CustomerUnitPrice","CustomerEffectiveUnitPrice","CustomerSubTotal","CustomerTotal",
-            "CustomerDiscountPercentage","CustomerDiscount",
-            "EffectiveMSRP","PartnerUnitPrice","PartnerPerDayUnitPrice","CustomerPerDayUnitPrice"
-        };
-
-        /// <summary>Summary text describing how many discrepancies were found.</summary>
-        public string LastSummary { get; private set; } = string.Empty;
-
-        /// <summary>
-        /// Compare two invoices and return a table of mismatched fields ordered
-        /// by business key and field name.
-        /// </summary>
-        public DataTable Reconcile(DataTable ours, DataTable microsoft)
-        {
-            if (ours == null) throw new ArgumentNullException(nameof(ours));
-            if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
-
-            var oursGroups = BuildGroups(ours);
-            var msGroups = BuildGroups(microsoft);
-            var sharedFields = FinancialColumns
-                .Where(f => ours.Columns.Contains(f) && microsoft.Columns.Contains(f))
-                .ToArray();
-
-            var result = BuildResultTable();
-
-            foreach (var key in oursGroups.Keys.Union(msGroups.Keys))
+            if (oursRows == null)
             {
-                oursGroups.TryGetValue(key, out var oursRows);
-                msGroups.TryGetValue(key, out var msRows);
-                int count = Math.Max(oursRows?.Count ?? 0, msRows?.Count ?? 0);
-                for (int i = 0; i < count; i++)
+                foreach (var msr in msRows!)
                 {
-                    DataRow? ourRow = (oursRows != null && i < oursRows.Count) ? oursRows[i] : null;
-                    DataRow? msRow = (msRows != null && i < msRows.Count) ? msRows[i] : null;
-                    if (ourRow == null || msRow == null)
-                    {
-                        AddMissingRow(result, key, ourRow == null ? "Missing in MSPUP" : "Missing in Microsoft");
-                        continue;
-                    }
-                    foreach (var field in sharedFields)
-                    {
-                        var ourVal = Convert.ToString(ourRow[field]) ?? string.Empty;
-                        var msVal = Convert.ToString(msRow[field]) ?? string.Empty;
-                        if (ValuesEqual(ourVal, msVal)) continue;
-                        AddMismatchRow(result, key, field, ourVal, msVal);
-                    }
+                    AddMissingRow(result, BuildFullKey(msr), "Missing in MSPUP");
+                    missingCount++;
+                }
+                continue;
+            }
+            if (msRows == null)
+            {
+                foreach (var or in oursRows)
+                {
+                    AddMissingRow(result, BuildFullKey(or), "Missing in Microsoft");
+                    missingCount++;
+                }
+                continue;
+            }
+
+            var msRemaining = new List<DataRow>(msRows);
+            foreach (var or in oursRows)
+            {
+                var oDate = ParseDate(or["ChargeStartDate"]);
+                int idx = msRemaining.FindIndex(r => Math.Abs((ParseDate(r["ChargeStartDate"]) - oDate).Days) <= 1);
+                if (idx == -1)
+                {
+                    AddMissingRow(result, BuildFullKey(or), "Missing in Microsoft");
+                    missingCount++;
+                    continue;
+                }
+
+                var msr = msRemaining[idx];
+                msRemaining.RemoveAt(idx);
+
+                foreach (var field in sharedFields)
+                {
+                    var a = Convert.ToString(or[field]) ?? string.Empty;
+                    var b = Convert.ToString(msr[field]) ?? string.Empty;
+                    if (ValuesEqual(a, b)) continue;
+                    AddMismatchRow(result, BuildFullKey(or), field, a, b);
+                    mismatchCount++;
                 }
             }
-
-            // Order by composite key then field name
-            var ordered = result.AsEnumerable()
-                .OrderBy(r => r[KeyColumns[0]])
-                .ThenBy(r => r[KeyColumns[1]])
-                .ThenBy(r => r[KeyColumns[2]])
-                .ThenBy(r => r[KeyColumns[3]])
-                .ThenBy(r => r[KeyColumns[4]])
-                .ThenBy(r => r["Field Name"]);
-            var orderedTable = BuildResultTable();
-            foreach (var r in ordered) orderedTable.ImportRow(r);
-
-            LastSummary = $"Discrepancies found: {orderedTable.Rows.Count}";
-            return orderedTable;
-        }
-
-        private static Dictionary<string, List<DataRow>> BuildGroups(DataTable table)
-        {
-            var dict = new Dictionary<string, List<DataRow>>(StringComparer.OrdinalIgnoreCase);
-            foreach (DataRow row in table.Rows)
+            foreach (var msr in msRemaining)
             {
-                if (!HasValidKey(row)) continue;
-                string key = BuildKey(row);
-                if (!dict.TryGetValue(key, out var list))
-                {
-                    list = new List<DataRow>();
-                    dict[key] = list;
-                }
-                list.Add(row);
+                AddMissingRow(result, BuildFullKey(msr), "Missing in MSPUP");
+                missingCount++;
             }
-            return dict;
         }
 
-        private static bool HasValidKey(DataRow row)
+        LastSummary = $"Compared {ours.Rows.Count} MSP rows vs {microsoft.Rows.Count} MS rows – {missingCount} keys missing, {mismatchCount} value mismatches";
+        return result;
+    }
+
+    private Dictionary<string, List<DataRow>> BuildGroups(DataTable table)
+    {
+        var dict = new Dictionary<string, List<DataRow>>(StringComparer.OrdinalIgnoreCase);
+        foreach (DataRow row in table.Rows)
         {
-            foreach (var col in KeyColumns)
+            if (!HasValidKey(row)) continue;
+            var key = BuildGroupKey(row);
+            if (!dict.TryGetValue(key, out var list))
             {
-                if (!row.Table.Columns.Contains(col)) return false;
-                string val = Convert.ToString(row[col]) ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(val)) return false;
+                list = new List<DataRow>();
+                dict[key] = list;
             }
-            return true;
+            list.Add(row);
         }
+        return dict;
+    }
 
-        private static string BuildKey(DataRow row)
-        {
-            return string.Join("|", KeyColumns.Select(c => Convert.ToString(row[c])!.Trim().ToUpperInvariant()));
-        }
+    private string BuildGroupKey(DataRow row)
+    {
+        return string.Join("|", new[]{
+            Value(row,"CustomerDomainName"),
+            Value(row,"ProductId"),
+            Value(row,"ChargeType"),
+            Value(row,"SubscriptionId")
+        });
+    }
 
-        private static DataTable BuildResultTable()
-        {
-            var t = new DataTable();
-            foreach (var c in KeyColumns) t.Columns.Add(c);
-            t.Columns.Add("Field Name");
-            t.Columns.Add("Our Value");
-            t.Columns.Add("Microsoft Value");
-            t.Columns.Add("Explanation");
-            t.Columns.Add("Suggested Action");
-            t.Columns.Add("Reason");
-            return t;
-        }
+    private static string BuildFullKey(DataRow row)
+    {
+        return string.Join("|", new[]{
+            Value(row,"CustomerDomainName"),
+            Value(row,"ProductId"),
+            Value(row,"ChargeType"),
+            DateTime.TryParse(Convert.ToString(row["ChargeStartDate"]), out var d) ? d.ToString("yyyy-MM-dd") : Value(row,"ChargeStartDate"),
+            Value(row,"SubscriptionId")
+        });
+    }
 
-        private static void AddMissingRow(DataTable table, string key, string message)
-        {
-            var r = table.NewRow();
-            var parts = key.Split('|');
-            for (int i = 0; i < KeyColumns.Length; i++)
-                r[KeyColumns[i]] = i < parts.Length ? parts[i] : string.Empty;
-            r["Field Name"] = "Row";
-            r["Our Value"] = string.Empty;
-            r["Microsoft Value"] = string.Empty;
-            r["Explanation"] = message;
-            r["Suggested Action"] = string.Empty;
-            r["Reason"] = "Row missing in " + (message.Contains("Microsoft") ? "Microsoft invoice" : "MSPUP invoice");
-            table.Rows.Add(r);
-        }
+    private static bool HasValidKey(DataRow row)
+    {
+        return new[] { "CustomerDomainName", "ProductId", "ChargeType", "ChargeStartDate", "SubscriptionId" }
+            .All(c => row.Table.Columns.Contains(c) && !string.IsNullOrWhiteSpace(Convert.ToString(row[c])));
+    }
 
-        private static void AddMismatchRow(DataTable table, string key, string field, string ourVal, string msVal)
-        {
-            var r = table.NewRow();
-            var parts = key.Split('|');
-            for (int i = 0; i < KeyColumns.Length; i++)
-                r[KeyColumns[i]] = i < parts.Length ? parts[i] : string.Empty;
-            r["Field Name"] = FriendlyNameMap.Get(field);
-            r["Our Value"] = ourVal;
-            r["Microsoft Value"] = msVal;
-            r["Explanation"] = $"Mismatch in {field}: {ourVal} vs {msVal}";
-            r["Suggested Action"] = string.Empty;
-            r["Reason"] = "Amount mismatch";
-            table.Rows.Add(r);
-        }
+    private static string Value(DataRow row, string column)
+        => (Convert.ToString(row[column]) ?? string.Empty).Trim().ToUpperInvariant();
 
-        private static bool ValuesEqual(string a, string b)
-        {
-            a = a.Trim();
-            b = b.Trim();
-            if (decimal.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out var da) &&
-                decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out var db))
-            {
-                return Math.Abs(da - db) <= AppConfig.Validation.NumericTolerance;
-            }
-            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-        }
+    private static DataTable BuildResultTable()
+    {
+        var t = new DataTable();
+        foreach (var c in new[]{"CustomerDomainName","ProductId","ChargeType","ChargeStartDate","SubscriptionId"})
+            t.Columns.Add(c);
+        t.Columns.Add("Field Name");
+        t.Columns.Add("Our Value");
+        t.Columns.Add("Microsoft Value");
+        t.Columns.Add("Explanation");
+        t.Columns.Add("Suggested Action");
+        t.Columns.Add("Reason");
+        return t;
+    }
+
+    private static void AddMissingRow(DataTable table, string key, string message)
+    {
+        var r = table.NewRow();
+        var parts = key.Split('|');
+        for (int i = 0; i < 5; i++)
+            r[i] = i < parts.Length ? parts[i] : string.Empty;
+        r["Field Name"] = "Row";
+        r["Our Value"] = string.Empty;
+        r["Microsoft Value"] = string.Empty;
+        r["Explanation"] = message;
+        r["Suggested Action"] = string.Empty;
+        r["Reason"] = "Row missing in " + (message.Contains("Microsoft") ? "Microsoft invoice" : "MSPUP invoice");
+        table.Rows.Add(r);
+    }
+
+    private static void AddMismatchRow(DataTable table, string key, string field, string ourVal, string msVal)
+    {
+        var r = table.NewRow();
+        var parts = key.Split('|');
+        for (int i = 0; i < 5; i++)
+            r[i] = i < parts.Length ? parts[i] : string.Empty;
+        r["Field Name"] = FriendlyNameMap.Get(field);
+        r["Our Value"] = ourVal;
+        r["Microsoft Value"] = msVal;
+        r["Explanation"] = $"Mismatch in {field}: {ourVal} vs {msVal}";
+        r["Suggested Action"] = string.Empty;
+        r["Reason"] = "Amount mismatch";
+        table.Rows.Add(r);
+    }
+
+    private static bool ValuesEqual(string a, string b)
+    {
+        a = a.Trim();
+        b = b.Trim();
+        if (decimal.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out var da) &&
+            decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out var db))
+            return Math.Abs(da - db) <= AppConfig.Validation.NumericTolerance;
+        return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DateTime ParseDate(object? val)
+    {
+        if (val == null) return DateTime.MinValue;
+        if (DateTime.TryParse(Convert.ToString(val), out var d)) return d.Date;
+        return DateTime.MinValue;
     }
 }

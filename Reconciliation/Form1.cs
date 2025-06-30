@@ -66,8 +66,7 @@ namespace Reconciliation
             _toolTip.SetToolTip(btnExportLogs, "Export log to CSV");
             _toolTip.SetToolTip(btnResetLogs, "Clear logs");
             _toolTip.SetToolTip(btnToggleFiles, "Hide/Show details");
-            _toolTip.SetToolTip(cmbFieldFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
-            _toolTip.SetToolTip(txtExplanationFilter, "Enter part of a field name or a keyword from the explanation to quickly filter discrepancies.");
+            _toolTip.SetToolTip(txtFilter, "Type to filter results");
             this.rbExternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbInternal.CheckedChanged += new System.EventHandler(this.RadioButton_CheckedChanged);
             this.rbExternal.Checked = true;
@@ -82,10 +81,7 @@ namespace Reconciliation
             dgAzurePriceMismatch.Visible = false;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             dgResultdata.RowPrePaint += DataGridView1_RowPrePaint;
-            cmbFieldFilter.TextChanged += FilterResults;
-            cmbFieldFilter.SelectedIndexChanged += FilterResults;
-            txtExplanationFilter.TextChanged += FilterResults;
-            chkHighPriorityOnly.CheckedChanged += FilterResults;
+            txtFilter.TextChanged += FilterResults;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
                 tbcMenu.TabPages.Remove(tabPage3);
@@ -349,14 +345,12 @@ namespace Reconciliation
                 // Run the CPU-bound operations asynchronously
                 if (rbExternal.Checked == true)
                 {
-                    var svc = new ReconciliationService();
+                    var svc = new BusinessKeyReconciliationService();
                     _resultData = await Task.Run(() =>
-                    {
-                        return svc.CompareInvoices(_sixDotOneDataView.Table,
-                                                     _microsoftDataView.Table)
-                                   .DefaultView;
-                    });
+                        svc.Reconcile(_sixDotOneDataView.Table, _microsoftDataView.Table)
+                            .DefaultView);
                     _lastSummary = svc.LastSummary;
+                    SimpleLogger.Info(_lastSummary);
 
                     Invoke(new Action(() =>
                     {
@@ -393,27 +387,6 @@ namespace Reconciliation
                         dgResultdata.Visible = true;
                     }));
                 }
-                else if (rbAdvanced.Checked)
-                {
-                    var svc = CreateAdvancedService();
-                    var result = await Task.Run(() => svc.Reconcile(_microsoftDataView.Table, _sixDotOneDataView.Table));
-                    _resultData = result.Exceptions.DefaultView;
-                    _lastSummary = $"Unmatched: {result.Summary.UnmatchedGroups} Over: {result.Summary.OverBill} Under: {result.Summary.UnderBill}";
-
-                    Invoke(new Action(() =>
-                    {
-                        BindingSource bindingSource = new BindingSource { DataSource = _resultData };
-                        dgResultdata.DataSource = bindingSource;
-                        AutoFitColumns(dgResultdata);
-                        dgResultdata.ClearSelection();
-                        btnExportToCsv.Enabled = true;
-                        lblMismatchSummary.Text = _lastSummary;
-                        lblMismatchSummary.Visible = true;
-                        PopulateFieldFilterOptions();
-                        lblEmptyMessage.Visible = _resultData.Count == 0;
-                        dgResultdata.Visible = true;
-                    }));
-                }
                 else
                 {
                     var validation = await Task.Run(() =>
@@ -423,6 +396,7 @@ namespace Reconciliation
                     });
                     _resultData = validation.InvalidRowsView;
                     _lastSummary = $"High: {validation.HighPriority}  Low: {validation.LowPriority}";
+                    SimpleLogger.Info(_lastSummary);
 
                     Invoke(new Action(() =>
                     {
@@ -463,6 +437,8 @@ namespace Reconciliation
                 }
 
                 PopulateLogsGrid();
+                string logPath = $"Log_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                SimpleLogger.Export(logPath);
                 FlashLogsTab();
             }
             catch (Exception exception)
@@ -477,7 +453,7 @@ namespace Reconciliation
                 // Format current date and time
                 string dateTimeNow = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string defaultFileName = $"Export_{dateTimeNow}.xlsx";
-                if (rbExternal.Checked == true || rbAdvanced.Checked)
+                if (rbExternal.Checked == true)
                 {
                     defaultFileName = $"FileComparisonsData_{dateTimeNow}.xlsx";
                 }
@@ -722,60 +698,29 @@ namespace Reconciliation
         private void FilterResults(object? sender, EventArgs e)
         {
             if (_resultData == null) return;
-            var filters = new List<string>();
-            if (cmbFieldFilter.SelectedIndex > 0)
-                filters.Add($"[Field Name] = '{cmbFieldFilter.SelectedItem.ToString().Replace("'", "''")}'");
-            if (!string.IsNullOrWhiteSpace(txtExplanationFilter.Text))
-                filters.Add($"[Explanation] LIKE '%{txtExplanationFilter.Text.Replace("'", "''")}%'");
-            if (chkHighPriorityOnly != null && chkHighPriorityOnly.Checked)
+            string term = txtFilter.Text.Replace("'", "''");
+            if (string.IsNullOrWhiteSpace(term))
             {
-                var cols = new[] { "Eff. Days Validation", "Partner Discount Validation" };
-                var checks = cols.Where(c => _resultData.Table.Columns.Contains(c))
-                    .Select(c => $"LEN([{c}]) > 0");
-                if (checks.Any())
-                    filters.Add("(" + string.Join(" OR ", checks) + ")");
+                _resultData.RowFilter = string.Empty;
             }
-            _resultData.RowFilter = string.Join(" AND ", filters);
+            else
+            {
+                _resultData.RowFilter = string.Format(
+                    "[Field Name] LIKE '%{0}%' OR Explanation LIKE '%{0}%' OR Reason LIKE '%{0}%'",
+                    term);
+            }
             lblMismatchSummary.Text = _lastSummary;
             lblMismatchSummary.Visible = !string.IsNullOrEmpty(_lastSummary);
         }
 
         private void PopulateFieldFilterOptions()
         {
-            cmbFieldFilter.Items.Clear();
-            txtExplanationFilter.Text = string.Empty;
-
-            if (_resultData == null || !_resultData.Table.Columns.Contains("Field Name") || _resultData.Count == 0)
-            {
-                cmbFieldFilter.Items.Add("-- No fields available --");
-                cmbFieldFilter.SelectedIndex = 0;
-                cmbFieldFilter.Enabled = false;
-                txtExplanationFilter.Enabled = false;
-                return;
-            }
-
-            _resultData.Table.CaseSensitive = false;
-            cmbFieldFilter.Items.Add("-- Select a Field --");
-            var fields = _resultData.Table.AsEnumerable()
-                .Select(r => r["Field Name"].ToString())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Distinct()
-                .OrderBy(s => s)
-                .ToArray();
-            cmbFieldFilter.Items.AddRange(fields);
-            cmbFieldFilter.SelectedIndex = 0;
-            cmbFieldFilter.Enabled = true;
-            txtExplanationFilter.Enabled = true;
+            txtFilter.Text = string.Empty;
         }
 
         private void DisableFilters()
         {
-            cmbFieldFilter.Items.Clear();
-            cmbFieldFilter.Items.Add("-- No fields available --");
-            cmbFieldFilter.SelectedIndex = 0;
-            cmbFieldFilter.Enabled = false;
-            txtExplanationFilter.Text = string.Empty;
-            txtExplanationFilter.Enabled = false;
+            txtFilter.Text = string.Empty;
         }
 
         #endregion Button_Clicks
@@ -847,11 +792,6 @@ namespace Reconciliation
                 modeSetFieldInternal();
                 resetData();
             }
-            else if (rbAdvanced.Checked)
-            {
-                modeSetFieldAdvanced();
-                resetData();
-            }
         }
         private void modeSetFieldInternal()
         {
@@ -907,12 +847,6 @@ namespace Reconciliation
             //}
         }
 
-        private void modeSetFieldAdvanced()
-        {
-            modeSetFieldExternal();
-            rbAdvanced.Checked = true;
-        }
-
         #endregion RadioButton_Modes
 
         #region Export_ToFile
@@ -935,7 +869,7 @@ namespace Reconciliation
                 // Add header row
                 AddHeaderRow(dataTable, worksheet, startRow);
 
-                if (rbExternal.Checked || rbAdvanced.Checked)
+                if (rbExternal.Checked)
                 {
                     AddDataRows(dataTable, worksheet, startRow + 1);
                     AddDataRowsWithColor(dataTable, worksheet, startRow + 1);
@@ -1271,31 +1205,7 @@ namespace Reconciliation
 
         private void PopulateLogsGrid()
         {
-            var table = new DataTable();
-            table.Columns.Add("Timestamp");
-            table.Columns.Add("Level");
-            table.Columns.Add("Row");
-            table.Columns.Add("Column");
-            table.Columns.Add("Description");
-            table.Columns.Add("Raw");
-            table.Columns.Add("File");
-            table.Columns.Add("Context");
-
-            foreach (var e in ErrorLogger.AllEntries)
-            {
-                var r = table.NewRow();
-                r[0] = e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
-                r[1] = e.ErrorLevel;
-                r[2] = e.RowNumber > 0 ? e.RowNumber.ToString() : string.Empty;
-                r[3] = e.ColumnName;
-                r[4] = FormatNumeric(e.Description, e.ColumnName);
-                r[5] = FormatNumeric(e.RawValue, e.ColumnName);
-                r[6] = e.FileName;
-                r[7] = e.Context;
-                table.Rows.Add(r);
-            }
-
-            dgvLogs.DataSource = table;
+            dgvLogs.DataSource = SimpleLogger.ToTable();
             UpdateLogSummary();
         }
 
@@ -1308,33 +1218,13 @@ namespace Reconciliation
 
         private void UpdateLogSummary()
         {
-            int errorCount = dgvLogs.Rows.Cast<DataGridViewRow>()
-                .Count(r => r.Cells["Level"].Value?.ToString() == "Error");
-            int warningCount = dgvLogs.Rows.Cast<DataGridViewRow>()
-                .Count(r => r.Cells["Level"].Value?.ToString() == "Warning");
-            lblLogsSummary.Text = $"⚠ {warningCount} Warnings,  {errorCount} Errors";
-            if (errorCount > 0)
-                lblLogsSummary.ForeColor = Color.Red;
-            else if (warningCount > 0)
-                lblLogsSummary.ForeColor = Color.Orange;
-            else
-                lblLogsSummary.ForeColor = Color.Green;
+            int errorCount = SimpleLogger.Entries.Count(e => e.Level == "ERROR");
+            int warningCount = SimpleLogger.Entries.Count(e => e.Level == "WARN");
+            lblLogsSummary.Text = $"{warningCount} Warnings, {errorCount} Errors";
         }
 
         private void dgvLogs_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
         {
-            foreach (DataGridViewRow row in dgvLogs.Rows)
-            {
-                if (row.Cells["Level"].Value is string level)
-                {
-                    if (level == "Error")
-                        row.DefaultCellStyle.BackColor = Color.Red;
-                    else if (level == "Warning")
-                        row.DefaultCellStyle.BackColor = Color.Orange;
-                    else if (level == "Info")
-                        row.DefaultCellStyle.BackColor = Color.LightGray;
-                }
-            }
             UpdateLogSummary();
         }
         // Helper method to safely convert to decimal
@@ -1441,429 +1331,7 @@ namespace Reconciliation
 
         #endregion Helpers
 
-        #region Unused_Old
-        private async void btnCompare_ClickOld(object sender, EventArgs e)
-        {
-            try
-            {
-                dgResultdata.DataSource = null;
-                dgAzurePriceMismatch.DataSource = null;
-                lblEmptyMessage.Text = "Please wait, processing...";
-                lblEmptyMessage.Visible = true;
-                if (rbExternal.Checked == true)
-                {
-                    _resultData = await Task.Run(() =>
-                    {
-                        var mismatchFromMicrosoft = FindMismatchedRowsFromMicrosoft(
-                            _microsoftDataView.Table,
-                            _sixDotOneDataView.Table,
-                            _uniqueKeyColumns,
-                            MismatchValueIdentifier.MicrosoftMarker
-                        );
-
-                        var mismatchFromSixDotOne = FindMismatchedRowsFromSixDotOne(
-                           _sixDotOneDataView.Table,
-                           _microsoftDataView.Table,
-                           _uniqueKeyColumns,
-                           MismatchValueIdentifier.SixDotOneMarker
-                        );
-
-                        return CombineMismatchedResults(mismatchFromMicrosoft, mismatchFromSixDotOne);
-                    });
-
-                    Invoke(new Action(() =>
-                    {
-                        var mismatchData = _resultData.Table.Clone();
-
-                        foreach (DataRow row in _resultData.Table.Rows)
-                        {
-                            DataRow newRow = mismatchData.NewRow();
-                            newRow.ItemArray = row.ItemArray; // Copy row data
-                            mismatchData.Rows.Add(newRow); // Add row to new DataTable
-                        }
-                        dgResultdata.DataSource = mismatchData.DefaultView;
-                        dgResultdata.ClearSelection();
-                        btnExportToCsv.Enabled = true;
-                        if (dgResultdata.Rows.Count == 0)
-                        {
-                            lblEmptyMessage.Text = "No Discrepancy Records Found.";
-                        }
-                        else
-                        {
-                            lblEmptyMessage.Visible = false;
-                        }
-                        dgResultdata.Visible = true;
-                    }));
-                    DataTable matchedDataTable = await Task.Run(() =>
-                    {
-                        // TODO: use PriceMismatchService for price comparison
-                        var svc = new PriceMismatchService();
-                        return svc.GetPriceMismatches(
-                            _sixDotOneDataView.Table,
-                            _microsoftDataView.Table
-                        );
-                    });
-                    Invoke(new Action(() =>
-                    {
-                        _pricematchDataView = new DataView(matchedDataTable);
-                        dgAzurePriceMismatch.ClearSelection();
-                        dgAzurePriceMismatch.DataSource = _pricematchDataView;
-                        btnPriceMismatchingExportToCsv.Enabled = true;
-                        if (dgAzurePriceMismatch.Rows.Count == 0)
-                        {
-                            lblPricematchingEmptyMessage.Text = "No Records Found.";
-                        }
-                        else
-                        {
-                            lblPricematchingEmptyMessage.Visible = false;
-                            lblInfoPricematching.Visible = true;
-                        }
-                        dgAzurePriceMismatch.Visible = true;
-                    }));
-                }
-                else
-                {
-                    var invalResult = await Task.Run(() =>
-                    {
-                        var startTime = DateTime.Now; // Capture start time
-
-                        // Validate records
-                        return new InvoiceValidationService().ValidateInvoice(_sixDotOneDataView.Table);
-                    });
-                    _resultData = invalResult.InvalidRowsView;
-
-                    Invoke(new Action(() =>
-                    {
-                        dgResultdata.DataSource = invalResult.InvalidRowsView;
-                        dgResultdata.ClearSelection();
-                        btnExportToCsv.Enabled = true;
-
-                        if (dgResultdata.Rows.Count == 0)
-                        {
-                            lblEmptyMessage.Text = "No Discrepancy Records Found.";
-                        }
-                        else
-                        {
-                            lblEmptyMessage.Visible = false;
-                        }
-                        dgResultdata.Visible = true;
-
-                        // Attach the event handler for cell formatting
-                        dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
-                    }));
-                }
-            }
-            catch (Exception exception)
-            {
-                MessageBox.Show(exception.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private DataTable FindMismatchedRowsFromMicrosoft(DataTable firstImportDataTable, DataTable secondImportDataTable, string[] uniqueKeyColumns1, string addName)
-        {
-            if (uniqueKeyColumns1 == null || uniqueKeyColumns1.Length == 0)
-            {
-                throw new ArgumentException("Unique key columns must be specified.");
-            }
-
-            // Create a new DataTable to store the mismatched rows
-            DataTable mismatchedRowsTable = firstImportDataTable.Clone();
-
-            int firstTableMissingCount = 0;
-            int secondTableMissingCount = 0;
-
-            try
-            {
-                // Iterate through each row in firstImportDataTable
-                foreach (DataRow firstRow in firstImportDataTable.Rows)
-                {
-                    bool matchFound = false;
-
-                    // Iterate through each row in secondImportDataTable to find a match
-                    foreach (DataRow secondRow in secondImportDataTable.Rows)
-                    {
-                        bool match = true;
-
-                        // Check if all unique key columns match
-                        foreach (string col in uniqueKeyColumns1)
-                        {
-                            if (!firstRow[col].Equals(secondRow[col]))
-                            {
-                                match = false;
-                                break;
-                            }
-                        }
-
-                        if (match)
-                        {
-                            matchFound = true;
-                            break; // Exit the loop since we found a match
-                        }
-                    }
-
-                    // If no match is found, add the row to the mismatchedRowsTable
-                    if (!matchFound)
-                    {
-                        DataRow newRow = mismatchedRowsTable.NewRow();
-                        newRow.ItemArray = firstRow.ItemArray;
-                        mismatchedRowsTable.Rows.Add(newRow);
-                        firstTableMissingCount++;
-                    }
-                }
-
-                // Check for rows in secondImportDataTable not in firstImportDataTable
-                foreach (DataRow secondRow in secondImportDataTable.Rows)
-                {
-                    bool matchFound = false;
-
-                    foreach (DataRow firstRow in firstImportDataTable.Rows)
-                    {
-                        bool match = true;
-
-                        foreach (string col in uniqueKeyColumns1)
-                        {
-                            if (!secondRow[col].Equals(firstRow[col]))
-                            {
-                                match = false;
-                                break;
-                            }
-                        }
-
-                        if (match)
-                        {
-                            matchFound = true;
-                            break;
-                        }
-                    }
-
-                    if (!matchFound)
-                    {
-                        secondTableMissingCount++;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"\nError during comparison: {ex.Message}");
-                throw;
-            }
-            return mismatchedRowsTable;
-        }
-        private DataTable FindMismatchedRowsFromSixDotOne(DataTable firstImportDataTable, DataTable secondImportDataTable, string[] uniqueKeyColumns1, string addName)
-        {
-            // Start time and stopwatch
-            DateTime startTime = DateTime.Now;
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            string localIP = Dns.GetHostAddresses(Dns.GetHostName())[0].ToString();
-            AppendLog($"******************** Comparison of Microsoft and MSP Hub Invoice Run ********************");
-            AppendLog($"\nComparison of Microsoft and MSP Hub Invoice started at: {startTime}");
-            AppendLog($"\nLocal IP: {localIP}");
-
-            // Validate inputs
-            if (uniqueKeyColumns1 == null || uniqueKeyColumns1.Length == 0)
-            {
-                throw new ArgumentException("Unique key columns must be specified.");
-            }
-
-            // Create a new DataTable to store the mismatched rows
-            DataTable mismatchedRowsTable = firstImportDataTable.Clone();
-
-            int firstTableMissingCount = 0;
-            int secondTableMissingCount = 0;
-
-            try
-            {
-                // Iterate through each row in firstImportDataTable
-                foreach (DataRow firstRow in firstImportDataTable.Rows)
-                {
-                    bool matchFound = false;
-
-                    // Iterate through each row in secondImportDataTable to find a match
-                    foreach (DataRow secondRow in secondImportDataTable.Rows)
-                    {
-                        bool match = true;
-
-                        // Check if all unique key columns match
-                        foreach (string col in uniqueKeyColumns1)
-                        {
-                            if (!firstRow[col].Equals(secondRow[col]))
-                            {
-                                match = false;
-                                break;
-                            }
-                        }
-
-                        if (match)
-                        {
-                            matchFound = true;
-                            break; // Exit the loop since we found a match
-                        }
-                    }
-
-                    // If no match is found, add the row to the mismatchedRowsTable
-                    if (!matchFound)
-                    {
-                        DataRow newRow = mismatchedRowsTable.NewRow();
-                        newRow.ItemArray = firstRow.ItemArray;
-                        mismatchedRowsTable.Rows.Add(newRow);
-                        firstTableMissingCount++;
-                    }
-                }
-
-                // Check for rows in secondImportDataTable not in firstImportDataTable
-                foreach (DataRow secondRow in secondImportDataTable.Rows)
-                {
-                    bool matchFound = false;
-
-                    foreach (DataRow firstRow in firstImportDataTable.Rows)
-                    {
-                        bool match = true;
-
-                        foreach (string col in uniqueKeyColumns1)
-                        {
-                            if (!secondRow[col].Equals(firstRow[col]))
-                            {
-                                match = false;
-                                break;
-                            }
-                        }
-
-                        if (match)
-                        {
-                            matchFound = true;
-                            break;
-                        }
-                    }
-
-                    if (!matchFound)
-                    {
-                        secondTableMissingCount++;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"\nError during comparison: {ex.Message}");
-                throw;
-            }
-
-            // Log the counts
-            AppendLog($"\nTotal rows missing in first file: {firstTableMissingCount}");
-            AppendLog($"\nTotal rows missing in second file: {secondTableMissingCount}");
-
-            // Stop stopwatch and log end time
-            stopwatch.Stop();
-            DateTime endTime = DateTime.Now;
-            AppendLog($"\nComparison of Microsoft and MSP Hub Invoice ended at: {endTime}");
-            // Format elapsed time
-            TimeSpan elapsed = stopwatch.Elapsed;
-            string formattedElapsed = elapsed.TotalSeconds < 1
-                ? $"{elapsed.TotalMilliseconds:F2} ms"
-                : elapsed.ToString(@"hh\:mm\:ss");
-            AppendLog($"\nTotal time taken: {formattedElapsed}");
-            AppendLog($"\nReconcile is clicked\n\n");
-            return mismatchedRowsTable;
-        }
-
-        private DataView CombineMismatchedResults(DataTable resultFromMicrosoftTable, DataTable resultFromSixDotOneTable)
-        {
-            string columnName = "Not in this file";
-            string missingDataFlag = "MissingData";
-
-            var combinedResult = new DataTable();
-
-            // Add columns from resultFromSixDotOneTable
-            foreach (DataColumn column in resultFromSixDotOneTable.Columns)
-            {
-                combinedResult.Columns.Add(column.ColumnName, column.DataType);
-            }
-
-            // Add columns from resultFromMicrosoftTable that are not already in combinedResult
-            foreach (DataColumn column in resultFromMicrosoftTable.Columns)
-            {
-                if (!combinedResult.Columns.Contains(column.ColumnName))
-                {
-                    combinedResult.Columns.Add(column.ColumnName, column.DataType);
-                }
-            }
-
-            combinedResult.Columns.Add(columnName, typeof(string));
-            combinedResult.Columns.Add(missingDataFlag, typeof(bool)); // New flag for missing data
-
-            // Add data from resultFromMicrosoftTable
-            foreach (DataRow row in resultFromMicrosoftTable.Rows)
-            {
-                DataRow newRow = combinedResult.NewRow();
-                foreach (DataColumn column in resultFromMicrosoftTable.Columns)
-                {
-                    newRow[column.ColumnName] = row[column.ColumnName];
-                }
-                newRow[columnName] = lblSixDotOneFileName.Text;
-                newRow[missingDataFlag] = true; // Highlight missing in SixDotOne
-                combinedResult.Rows.Add(newRow);
-            }
-
-            // Add data from resultFromSixDotOneTable without marking as missing
-            foreach (DataRow row in resultFromSixDotOneTable.Rows)
-            {
-                DataRow newRow = combinedResult.NewRow();
-                foreach (DataColumn column in resultFromSixDotOneTable.Columns)
-                {
-                    newRow[column.ColumnName] = row[column.ColumnName];
-                }
-                newRow[columnName] = lblMicrosoftFileName.Text;
-                newRow[missingDataFlag] = false; // No highlight
-                combinedResult.Rows.Add(newRow);
-            }
-
-            return combinedResult.DefaultView;
-        }
-
-        private void DataGridView1_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
-        {
-            if (!rbExternal.Checked)
-                return;
-
-            var row = dgResultdata.Rows[e.RowIndex];
-            if (!row.DataGridView.Columns.Contains("Reason"))
-                return;
-
-            // Apply yellow background only to the "Reason" column
-            DataGridViewCell reasonCell = row.Cells["Reason"];
-            if (reasonCell != null && reasonCell.Value != null)
-            {
-                string reasonValue = reasonCell.Value.ToString();
-                if (!string.IsNullOrEmpty(reasonValue))
-                {
-                    if (reasonValue.Contains("This Line Item is missing in Microsoft Invoice") ||
-                        reasonValue.Contains("This Line Item is missing in MSP Hub Invoice"))
-                    {
-                        // Set only the Reason column to Yellow
-                        reasonCell.Style.BackColor = Color.Yellow;
-                        reasonCell.Style.ForeColor = Color.Black;
-                    }
-                }
-            }
-
-            // Existing mismatch highlighting logic
-            foreach (DataGridViewCell cell in row.Cells)
-            {
-                if (cell.Value != null)
-                {
-                    string cellValue = cell.Value.ToString();
-                    if (cellValue.Contains(MismatchValueIdentifier.MicrosoftMarker) ||
-                        cellValue.Contains(MismatchValueIdentifier.SixDotOneMarker))
-                    {
-                        row.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#EEDC5B"); // Yellow for mismatch
-                        return;
-                    }
-                }
-            }
-        }
-
-
-        #endregion Unused_Old
+        
 
 
 
