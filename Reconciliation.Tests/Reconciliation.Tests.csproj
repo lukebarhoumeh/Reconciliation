@@ -45,7 +45,7 @@
     <Compile Include="../Reconciliation/ExpressionColumnBuilder.cs" Link="ExpressionColumnBuilder.cs" />
     <Compile Include="../Reconciliation/CsvSchemaMapper.cs" Link="CsvSchemaMapper.cs" />
     <Compile Include="../Reconciliation/DataNormaliser.cs" Link="DataNormaliser.cs" />
-    <Compile Include="../Reconciliation/AdvancedReconciliationService.cs" Link="AdvancedReconciliationService.cs" />
+    <Compile Include="../Reconciliation/CsvPreProcessor.cs" Link="CsvPreProcessor.cs" />
     <Compile Include="../Reconciliation/BusinessKeyReconciliationService.cs" Link="BusinessKeyReconciliationService.cs" />
     <Compile Include="../Reconciliation/ReconciliationResult.cs" Link="ReconciliationResult.cs" />
     <Compile Include="../Reconciliation/InvoiceValidationResult.cs" Link="InvoiceValidationResult.cs" />

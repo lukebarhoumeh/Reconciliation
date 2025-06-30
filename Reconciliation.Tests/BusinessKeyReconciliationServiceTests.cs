@@ -46,4 +46,32 @@ public class BusinessKeyReconciliationServiceTests
         Assert.Equal("Total", result.Rows[0]["Field Name"]);
         Assert.Contains("Mismatch in Total", result.Rows[0]["Explanation"].ToString());
     }
+
+    [Fact]
+    public void Reconcile_HappyPath_NoDifferences()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+        var ms = CreateTable();
+        ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+    }
+
+    [Fact]
+    public void Reconcile_AllowsOneDayDateDifference()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+        var ms = CreateTable();
+        ms.Rows.Add("cust.com","P1","Usage","2024-01-02","SUB1","1","1","10","1");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+    }
 }

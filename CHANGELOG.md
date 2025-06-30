@@ -6,6 +6,7 @@
   via `column-map.json`.
 - Added `BusinessKeyReconciliationService` for strict business-key matching and
   financial column comparison with tolerance.
+- Replaced legacy compare logic with `BusinessKeyReconciliationService`, simplified UI filters and per-run CSV logging.
 - Improved button labels, tooltips and grid styling in the main UI for clarity.
 - Invoice validation exposes `InvalidRowsView` for easier binding and tests now reference the UI project.
 - UI option "Advanced Compare" runs the new engine and shows summary details.

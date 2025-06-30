@@ -57,7 +57,6 @@ namespace Reconciliation
             label3 = new Label();
             rbInternal = new RadioButton();
             rbExternal = new RadioButton();
-            rbAdvanced = new RadioButton();
             btnCompare = new Button();
             btnExportToCsv = new Button();
             lblDiscrepancyTitle = new Label();
@@ -92,10 +91,7 @@ namespace Reconciliation
             dgvLogs = new DataGridView();
             lblLogsSummary = new Label();
             lblMismatchSummary = new Label();
-            lblExplanationFilter = new Label();
-            cmbFieldFilter = new ComboBox();
-            txtExplanationFilter = new TextBox();
-            chkHighPriorityOnly = new CheckBox();
+            txtFilter = new TextBox();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             panel1.SuspendLayout();
@@ -237,17 +233,14 @@ namespace Reconciliation
             splitMain.Panel1.Controls.Add(label3);
             splitMain.Panel1.Controls.Add(rbInternal);
             splitMain.Panel1.Controls.Add(rbExternal);
-            splitMain.Panel1.Controls.Add(rbAdvanced);
+
             splitMain.Panel1.Controls.Add(btnCompare);
             splitMain.Panel1.Controls.Add(btnExportToCsv);
             splitMain.Panel1.Controls.Add(lblDiscrepancyTitle);
             splitMain.Panel1.Controls.Add(lblExternal1DiscrepancyMsg);
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
             splitMain.Panel1.Controls.Add(lblMismatchSummary);
-            splitMain.Panel1.Controls.Add(cmbFieldFilter);
-            splitMain.Panel1.Controls.Add(lblExplanationFilter);
-            splitMain.Panel1.Controls.Add(txtExplanationFilter);
-            splitMain.Panel1.Controls.Add(chkHighPriorityOnly);
+            splitMain.Panel1.Controls.Add(txtFilter);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileName);
@@ -377,17 +370,6 @@ namespace Reconciliation
             rbExternal.Text = "Compare with Microsoft Invoice";
             rbExternal.UseVisualStyleBackColor = true;
             //
-            // rbAdvanced
-            //
-            rbAdvanced.AutoSize = true;
-            rbAdvanced.Location = new Point(650, 43);
-            rbAdvanced.Name = "rbAdvanced";
-            rbAdvanced.Size = new Size(196, 28);
-            rbAdvanced.TabIndex = 36;
-            rbAdvanced.TabStop = true;
-            rbAdvanced.Text = "Advanced Compare";
-            rbAdvanced.UseVisualStyleBackColor = true;
-            //
             // btnCompare
             //
             btnCompare.Anchor = AnchorStyles.Right;
@@ -475,45 +457,13 @@ namespace Reconciliation
             lblMismatchSummary.TabIndex = 37;
             lblMismatchSummary.Text = "Summary";
             //
-            // cmbFieldFilter
+            // txtFilter
             //
-            cmbFieldFilter.Location = new Point(1200, 260);
-            cmbFieldFilter.Name = "cmbFieldFilter";
-            cmbFieldFilter.Size = new Size(150, 27);
-            cmbFieldFilter.TabIndex = 38;
-            cmbFieldFilter.DropDownStyle = ComboBoxStyle.DropDown;
-            cmbFieldFilter.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
-            cmbFieldFilter.AutoCompleteSource = AutoCompleteSource.ListItems;
-            cmbFieldFilter.Items.Add("-- Select a Field --");
-            cmbFieldFilter.SelectedIndex = 0;
-            //
-            // lblExplanationFilter
-            //
-            lblExplanationFilter.AutoSize = true;
-            lblExplanationFilter.Location = new Point(1360, 263);
-            lblExplanationFilter.Name = "lblExplanationFilter";
-            lblExplanationFilter.Size = new Size(128, 20);
-            lblExplanationFilter.TabIndex = 39;
-            lblExplanationFilter.Text = "Filter Explanation:";
-            //
-            // txtExplanationFilter
-            //
-            txtExplanationFilter.Location = new Point(1520, 260);
-            txtExplanationFilter.Name = "txtExplanationFilter";
-            txtExplanationFilter.Size = new Size(200, 27);
-            txtExplanationFilter.TabIndex = 40;
-            txtExplanationFilter.PlaceholderText = "Type a keyword (e.g., missing, date, mismatch)";
-            //
-            // chkHighPriorityOnly
-            //
-            chkHighPriorityOnly.AutoSize = true;
-            chkHighPriorityOnly.Location = new Point(1740, 262);
-            chkHighPriorityOnly.Name = "chkHighPriorityOnly";
-            chkHighPriorityOnly.Size = new Size(165, 24);
-            chkHighPriorityOnly.TabIndex = 41;
-            chkHighPriorityOnly.Text = "High Priority Only";
-            chkHighPriorityOnly.UseVisualStyleBackColor = true;
-            chkHighPriorityOnly.CheckedChanged += new EventHandler(this.FilterResults);
+            txtFilter.Location = new Point(1200, 260);
+            txtFilter.Name = "txtFilter";
+            txtFilter.Size = new Size(300, 27);
+            txtFilter.TabIndex = 38;
+            txtFilter.PlaceholderText = "Filter...";
             //
             // dgResultdata
             //
@@ -1014,7 +964,6 @@ namespace Reconciliation
         private Label label3;
         private RadioButton rbInternal;
         private RadioButton rbExternal;
-        private RadioButton rbAdvanced;
         private Label lblInternal1DiscrepancyMsg;
         private Button btnReset;
         private Label lblExternal2DiscrepancyMsg;
@@ -1022,10 +971,7 @@ namespace Reconciliation
         private DataGridView dgvLogs;
         private Label lblLogsSummary;
         private Label lblMismatchSummary;
-        private Label lblExplanationFilter;
-        private ComboBox cmbFieldFilter;
-        private TextBox txtExplanationFilter;
-        private CheckBox chkHighPriorityOnly;
+        private TextBox txtFilter;
         private RichTextBox textLogs;
         private Button btnExportLogs;
         private Button btnResetLogs;

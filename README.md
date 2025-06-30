@@ -38,8 +38,13 @@ the detector instance.
 `ReconciliationService` encapsulates the external invoice matching logic so it
 can be unit tested without the WinForms UI.
 `BusinessKeyReconciliationService` provides stricter business-key matching and
-financial comparison. Call `Reconcile(msphub, microsoft)` to get a table of
-discrepancies.
+financial comparison.
+
+```csharp
+var svc = new BusinessKeyReconciliationService(
+    new[]{"CustomerDomainName","ProductId","ChargeType","ChargeStartDate","SubscriptionId"});
+var result = svc.Reconcile(msphub, microsoft);
+```
 
 ### Invoice Validation
 `InvoiceValidationService.ValidateInvoice` now returns an `InvoiceValidationResult`
