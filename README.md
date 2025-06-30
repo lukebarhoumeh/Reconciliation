@@ -36,8 +36,10 @@ tolerances by setting `NumericTolerance`, `DateTolerance` and `TextDistance` on
 the detector instance.
 
 `ReconciliationService` encapsulates the external invoice matching logic so it
-can be unit tested without the WinForms UI. Use
-`CompareInvoices(msphub, microsoft)` to get a table of discrepancies.
+can be unit tested without the WinForms UI.
+`BusinessKeyReconciliationService` provides stricter business-key matching and
+financial comparison. Call `Reconcile(msphub, microsoft)` to get a table of
+discrepancies.
 
 ### Invoice Validation
 `InvoiceValidationService.ValidateInvoice` now returns an `InvoiceValidationResult`
