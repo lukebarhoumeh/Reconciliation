@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Updated tests to target only `net8.0` and fixed build on non-Windows hosts.
+- Removed leftover `RowPrePaint` event wiring in `Form1`.
+- Pinned SDK version to `8.0.117` for Linux CI compatibility.
 - Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
 - Added advanced reconciliation service with composite key grouping and mapping
   via `column-map.json`.

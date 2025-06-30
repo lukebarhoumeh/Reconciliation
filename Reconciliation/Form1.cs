@@ -80,7 +80,6 @@ namespace Reconciliation
             dgResultdata.Visible = false;
             dgAzurePriceMismatch.Visible = false;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            dgResultdata.RowPrePaint += DataGridView1_RowPrePaint;
             txtFilter.TextChanged += FilterResults;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
