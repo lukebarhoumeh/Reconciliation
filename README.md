@@ -17,7 +17,7 @@ If any column is missing the import will fail and list the missing names.
 Sample templates are available under `samples/`. Ensure the headers match the following names exactly.
 
 ### Running Tests
-Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj` to run tests for both `net8.0` and `net8.0-windows`.
+Use `dotnet test Reconciliation.Tests/Reconciliation.Tests.csproj` to run tests targeting `net8.0`.
 
 ### Building the WinForms application
 The project now targets `net8.0-windows` and builds `Reconciliation.exe`.
