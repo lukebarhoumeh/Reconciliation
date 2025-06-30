@@ -5,11 +5,15 @@ namespace Reconciliation.Tests;
 
 public class BusinessKeyReconciliationServiceTests
 {
-    private static DataTable CreateTable()
+    private static DataTable CreateTable(bool useAliases = false)
     {
         string[] cols =
         {
-            "CustomerDomainName","ProductId","ChargeType","ChargeStartDate","SubscriptionId",
+            useAliases ? "DomainUrl" : "CustomerDomainName",
+            useAliases ? "ProductGuid" : "ProductId",
+            "ChargeType",
+            "ChargeStartDate",
+            useAliases ? "SubscriptionGuid" : "SubscriptionId",
             "UnitPrice","Subtotal","Total","Quantity"
         };
         var dt = new DataTable();
@@ -22,7 +26,7 @@ public class BusinessKeyReconciliationServiceTests
     {
         var ours = CreateTable();
         ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
-        var ms = CreateTable();
+        var ms = CreateTable(true);
 
         var svc = new BusinessKeyReconciliationService();
         var result = svc.Reconcile(ours, ms);
@@ -36,7 +40,7 @@ public class BusinessKeyReconciliationServiceTests
     {
         var ours = CreateTable();
         ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
-        var ms = CreateTable();
+        var ms = CreateTable(true);
         ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","12","1");
 
         var svc = new BusinessKeyReconciliationService();
@@ -52,7 +56,7 @@ public class BusinessKeyReconciliationServiceTests
     {
         var ours = CreateTable();
         ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
-        var ms = CreateTable();
+        var ms = CreateTable(true);
         ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
 
         var svc = new BusinessKeyReconciliationService();
@@ -66,7 +70,7 @@ public class BusinessKeyReconciliationServiceTests
     {
         var ours = CreateTable();
         ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
-        var ms = CreateTable();
+        var ms = CreateTable(true);
         ms.Rows.Add("cust.com","P1","Usage","2024-01-02","SUB1","1","1","10","1");
 
         var svc = new BusinessKeyReconciliationService();
@@ -74,4 +78,19 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Empty(result.Rows);
     }
+
+    [Fact]
+    public void BusinessKeyReconciliation_AliasesWork()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+        var ms = CreateTable(true);
+        ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+    }
 }
+
