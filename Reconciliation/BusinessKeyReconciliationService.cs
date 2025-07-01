@@ -57,14 +57,13 @@ public class BusinessKeyReconciliationService
         CsvPreProcessor.Process(ours, false);
         CsvPreProcessor.Process(microsoft, true);
 
-        var tenants = new HashSet<string>(
-            ours.AsEnumerable()
-                .Select(r => r["CustomerDomainName"].ToString() ?? string.Empty),
-            StringComparer.OrdinalIgnoreCase);
+        var tenantSet = ours.AsEnumerable()
+            .Select(r => r["CustomerDomainName"].ToString()!.Trim().ToUpperInvariant())
+            .ToHashSet();
         if (microsoft.Rows.Count > 0)
         {
             var rows = microsoft.AsEnumerable()
-                .Where(r => tenants.Contains(r["CustomerDomainName"].ToString() ?? string.Empty))
+                .Where(r => tenantSet.Contains(r["CustomerDomainName"].ToString()!.Trim().ToUpperInvariant()))
                 .ToArray();
             microsoft = rows.Length > 0 ? rows.CopyToDataTable() : microsoft.Clone();
         }
@@ -75,6 +74,8 @@ public class BusinessKeyReconciliationService
         var sharedFields = FinancialColumns.Where(f =>
                 ours.Columns.Contains(f) && microsoft.Columns.Contains(f))
             .ToArray();
+        if (sharedFields.Length == 0)
+            SimpleLogger.Info("No shared finance columns – row-presence only");
 
         var result = BuildResultTable();
         int onlyMsphub = 0, onlyMicrosoft = 0, mismatchCount = 0, perfect = 0;

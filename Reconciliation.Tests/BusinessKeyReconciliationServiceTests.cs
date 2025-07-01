@@ -143,5 +143,21 @@ public class BusinessKeyReconciliationServiceTests
         Assert.Empty(diff.Rows);
         Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
     }
+
+    [Fact]
+    public void TenantFilter_CaseInsensitive()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("foo.com","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+
+        var ms = CreateTable(true);
+        ms.Rows.Add("FOO.COM","P1","Usage","2024-01-01","SUB1","1","1","10","1");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+    }
 }
 

@@ -5,6 +5,7 @@
 - Tenant slice and alias fixes ensure Microsoft rows are filtered to the MSP tenant and SubscriptionGUID is recognised.
 - Updated tests to target only `net8.0` and fixed build on non-Windows hosts.
 - Removed leftover `RowPrePaint` event wiring in `Form1`.
+- Missing-row detection no longer exits early and tenant filtering ignores case.
 - Pinned SDK version to `8.0.117` for Linux CI compatibility.
 - Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
 - Added advanced reconciliation service with composite key grouping and mapping
