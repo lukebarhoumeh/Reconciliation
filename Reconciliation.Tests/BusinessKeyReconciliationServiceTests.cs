@@ -21,6 +21,19 @@ public class BusinessKeyReconciliationServiceTests
         return dt;
     }
 
+    private static DataTable Table(params (string Col, string Val)[] cells)
+    {
+        var dt = new DataTable();
+        foreach (var (col, _) in cells)
+            if (!dt.Columns.Contains(col))
+                dt.Columns.Add(col);
+        var row = dt.NewRow();
+        foreach (var (col, val) in cells)
+            row[col] = val;
+        dt.Rows.Add(row);
+        return dt;
+    }
+
     [Fact]
     public void Reconcile_DetectsMissingRows()
     {
@@ -110,7 +123,25 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect: 1 | OnlyMSP: 0 | OnlyMS: 0 | Diff: 0", svc.LastSummary);
+        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+    }
+
+    [Fact]
+    public void AliasAndFallback_MatchesRows()
+    {
+        var ours = Table(("SubId","123"), ("ProductId","P1"),
+                         ("CustomerDomainName","foo.com"), ("ChargeType","NEW"),
+                         ("ChargeStartDate","2025-05-01"), ("UnitPrice","10"));
+
+        var ms   = Table(("SubscriptionGuid","123"), ("ProductId","P1"),
+                         ("CustomerDomainName","foo.com"), ("ChargeType","NEW"),
+                         ("ChargeStartDate","2025-05-01"), ("PartnerUnitPrice","10"));
+
+        var svc = new BusinessKeyReconciliationService();
+        var diff = svc.Reconcile(ours, ms);
+
+        Assert.Empty(diff.Rows);
+        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
     }
 }
 

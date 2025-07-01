@@ -11,7 +11,10 @@ namespace Reconciliation
             ["ChargeEndDate"] = "Invoice Date",
             ["CustomerDomainName"] = "Customer Website",
             ["PartnerId"] = "Partner ID",
-            ["PartnerTaxTotal"] = "Partner Tax Amount"
+            ["PartnerTaxTotal"] = "Partner Tax Amount",
+            ["PartnerSubTotal"] = "Subtotal",
+            ["PartnerTotal"] = "Total",
+            ["PartnerUnitPrice"] = "Unit Price"
         };
 
         public static string Get(string column)

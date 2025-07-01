@@ -349,7 +349,10 @@ namespace Reconciliation
                         svc.Reconcile(_sixDotOneDataView.Table, _microsoftDataView.Table)
                             .DefaultView);
                     _lastSummary = svc.LastSummary;
-                    SimpleLogger.Info(_lastSummary);
+                    var firstTenantDomain = _sixDotOneDataView.Table.Rows.Count > 0
+                        ? _sixDotOneDataView.Table.Rows[0]["CustomerDomainName"]?.ToString() ?? string.Empty
+                        : string.Empty;
+                    SimpleLogger.Info($"Tenant {firstTenantDomain}: {_lastSummary}");
 
                     Invoke(new Action(() =>
                     {
@@ -395,7 +398,10 @@ namespace Reconciliation
                     });
                     _resultData = validation.InvalidRowsView;
                     _lastSummary = $"High: {validation.HighPriority}  Low: {validation.LowPriority}";
-                    SimpleLogger.Info(_lastSummary);
+                    var firstTenantDomain = _sixDotOneDataView.Table.Rows.Count > 0
+                        ? _sixDotOneDataView.Table.Rows[0]["CustomerDomainName"]?.ToString() ?? string.Empty
+                        : string.Empty;
+                    SimpleLogger.Info($"Tenant {firstTenantDomain}: {_lastSummary}");
 
                     Invoke(new Action(() =>
                     {
