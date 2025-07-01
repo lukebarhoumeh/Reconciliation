@@ -356,7 +356,7 @@ namespace Reconciliation
             rbInternal.Size = new Size(258, 28);
             rbInternal.TabIndex = 35;
             rbInternal.TabStop = true;
-            rbInternal.Text = "Validate with MSP Hub Invoice";
+            rbInternal.Text = "MSP-Hub Data Quality";
             rbInternal.UseVisualStyleBackColor = true;
             // 
             // rbExternal
@@ -421,7 +421,7 @@ namespace Reconciliation
             lblDiscrepancyTitle.Name = "lblDiscrepancyTitle";
             lblDiscrepancyTitle.Size = new Size(109, 22);
             lblDiscrepancyTitle.TabIndex = 30;
-            lblDiscrepancyTitle.Text = "DISCREPANCY";
+            lblDiscrepancyTitle.Text = "Compare with Microsoft = missing / mismatched rows. MSP-Hub Data Quality = problems inside the file.";
             // 
             // lblExternal1DiscrepancyMsg
             // 

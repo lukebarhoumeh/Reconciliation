@@ -54,8 +54,20 @@ public class BusinessKeyReconciliationService
             microsoft = rows.Length > 0 ? rows.CopyToDataTable() : microsoft.Clone();
         }
 
-        CsvPreProcessor.Process(ours);
-        CsvPreProcessor.Process(microsoft);
+        CsvPreProcessor.Process(ours, false);
+        CsvPreProcessor.Process(microsoft, true);
+
+        var tenants = new HashSet<string>(
+            ours.AsEnumerable()
+                .Select(r => r["CustomerDomainName"].ToString() ?? string.Empty),
+            StringComparer.OrdinalIgnoreCase);
+        if (microsoft.Rows.Count > 0)
+        {
+            var rows = microsoft.AsEnumerable()
+                .Where(r => tenants.Contains(r["CustomerDomainName"].ToString() ?? string.Empty))
+                .ToArray();
+            microsoft = rows.Length > 0 ? rows.CopyToDataTable() : microsoft.Clone();
+        }
 
         var oursGroups = BuildGroups(ours);
         var msGroups = BuildGroups(microsoft);
@@ -125,7 +137,7 @@ public class BusinessKeyReconciliationService
             }
         }
 
-        LastSummary = $"Perfect: {perfect} | OnlyMSP: {onlyMsphub} | OnlyMS: {onlyMicrosoft} | Diff: {mismatchCount}";
+        LastSummary = $"Perfect:{perfect} | Only-MSP:{onlyMsphub} | Only-MS:{onlyMicrosoft} | Diff:{mismatchCount}";
         SimpleLogger.Info($"Tenant {partnerId}: {LastSummary}");
         return result;
     }
@@ -149,11 +161,15 @@ public class BusinessKeyReconciliationService
 
     private string BuildGroupKey(DataRow row)
     {
-        return string.Join("|", new[]{
-            Value(row,"CustomerDomainName"),
-            Value(row,"ProductId"),
-            Value(row,"ChargeType"),
-            SubscriptionValue(row)
+        string sub = Value(row, "SubscriptionId");
+        if (string.IsNullOrEmpty(sub) && row.Table.Columns.Contains("SubscriptionGuid"))
+            sub = Value(row, "SubscriptionGuid");
+        return string.Join("|", new[]
+        {
+            Value(row, "CustomerDomainName"),
+            Value(row, "ProductId"),
+            Value(row, "ChargeType"),
+            sub
         });
     }
 
