@@ -40,6 +40,20 @@ public class BusinessKeyReconciliationService
         if (ours == null) throw new ArgumentNullException(nameof(ours));
         if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
 
+        string partnerId = string.Empty;
+        if (ours.Columns.Contains("PartnerId"))
+            partnerId = ours.AsEnumerable()
+                            .Select(r => Convert.ToString(r["PartnerId"]) ?? string.Empty)
+                            .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(partnerId) && microsoft.Columns.Contains("PartnerId"))
+        {
+            var rows = microsoft.AsEnumerable()
+                .Where(r => string.Equals(Convert.ToString(r["PartnerId"]), partnerId, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            microsoft = rows.Length > 0 ? rows.CopyToDataTable() : microsoft.Clone();
+        }
+
         CsvPreProcessor.Process(ours);
         CsvPreProcessor.Process(microsoft);
 
@@ -112,6 +126,7 @@ public class BusinessKeyReconciliationService
         }
 
         LastSummary = $"Perfect: {perfect} | OnlyMSP: {onlyMsphub} | OnlyMS: {onlyMicrosoft} | Diff: {mismatchCount}";
+        SimpleLogger.Info($"Tenant {partnerId}: {LastSummary}");
         return result;
     }
 
