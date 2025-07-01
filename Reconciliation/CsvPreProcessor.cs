@@ -21,7 +21,8 @@ public static class CsvPreProcessor
         // Apply header aliases
         var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            { "SubscriptionGuid", "SubscriptionId" },
+            { "SubscriptionGUID", "SubscriptionId" },
+            { "PartnerID", "PartnerId" },
             { "DomainUrl", "CustomerDomainName" },
             { "CustomerName", "CustomerDomainName" },
             { "CustomerId", "CustomerDomainName" },
@@ -56,7 +57,9 @@ public static class CsvPreProcessor
     private static void Rename(DataTable table, string oldName, string newName)
     {
         if (!table.Columns.Contains(oldName)) return;
-        if (table.Columns.Contains(newName)) table.Columns.Remove(newName);
+        if (table.Columns.Contains(newName))
+            table.Columns.Remove(newName);
+        if (!table.Columns.Contains(oldName)) return;
         table.Columns[oldName].ColumnName = newName;
     }
 }

@@ -92,5 +92,25 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Empty(result.Rows);
     }
+
+    [Fact]
+    public void BusinessKeyReconciliation_AliasesAndTenantFilter()
+    {
+        var ours = CreateTable();
+        ours.Columns.Add("PartnerId");
+        ours.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1","T1");
+
+        var ms = new DataTable();
+        foreach (var c in new[]{"DomainUrl","ProductGuid","ChargeType","ChargeStartDate","SubscriptionGUID","UnitPrice","Subtotal","Total","Quantity","PartnerId"})
+            ms.Columns.Add(c);
+        ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1","T1");
+        ms.Rows.Add("cust.com","P1","Usage","2024-01-01","SUB1","1","1","10","1","T2");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+        Assert.Equal("Perfect: 1 | OnlyMSP: 0 | OnlyMS: 0 | Diff: 0", svc.LastSummary);
+    }
 }
 
