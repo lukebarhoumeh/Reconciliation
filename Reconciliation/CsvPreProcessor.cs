@@ -28,17 +28,14 @@ public static class CsvPreProcessor
             { "DomainUrl",       "CustomerDomainName" },
             { "ProductGuid",     "ProductId" },
             { "MPNId",           "ProductId" },
+            { "PartNumber",      "ProductId" },
             // --- Financial fields ---
-            { "PartnerUnitPrice",          "UnitPrice" },
-            { "PartnerEffectiveUnitPrice", "EffectiveUnitPrice" },
-            { "PartnerSubTotal",           "Subtotal" },
-            { "PartnerTotal",              "Total" },
             { "MSRP",                      "MSRPPrice" },
             { "BillableQuantity",          "Quantity" }
         };
 
         foreach (var kvp in aliasMap)
-            Rename(table, kvp.Key, kvp.Value);
+            MergeColumn(table, kvp.Key, kvp.Value);
 
         // Ensure all needed columns exist for downstream logic
         foreach (var col in new[] {
@@ -69,11 +66,23 @@ public static class CsvPreProcessor
         }
     }
 
-    private static void Rename(DataTable table, string oldName, string newName)
+    private static void MergeColumn(DataTable table, string oldName, string newName)
     {
         if (!table.Columns.Contains(oldName)) return;
-        if (table.Columns.Contains(newName))
-            table.Columns.Remove(newName);
-        table.Columns[oldName].ColumnName = newName;
+
+        if (!table.Columns.Contains(newName))
+        {
+            table.Columns[oldName].ColumnName = newName;
+            return;
+        }
+
+        foreach (DataRow row in table.Rows)
+        {
+            string target = Convert.ToString(row[newName]) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(target))
+                row[newName] = row[oldName];
+        }
+
+        table.Columns.Remove(oldName);
     }
 }

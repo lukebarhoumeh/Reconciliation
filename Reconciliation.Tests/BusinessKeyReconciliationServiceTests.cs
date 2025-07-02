@@ -5,14 +5,11 @@ namespace Reconciliation.Tests;
 
 public class BusinessKeyReconciliationServiceTests
 {
-    private static DataTable CreateTable(bool useAliases = false)
+    private static DataTable CreateTable(bool microsoft = false)
     {
-        string[] cols =
-        {
-            useAliases ? "DomainUrl" : "CustomerDomainName",
-            useAliases ? "ProductGuid" : "ProductId",
-            "UnitPrice","Subtotal","Total","Quantity"
-        };
+        string[] cols = microsoft
+            ? new[] { "DomainUrl", "ProductGuid", "UnitPrice", "Subtotal", "Total", "Quantity" }
+            : new[] { "CustomerDomainName", "ProductId", "PartnerUnitPrice", "PartnerSubTotal", "PartnerTotal", "Quantity" };
         var dt = new DataTable();
         foreach (var c in cols) dt.Columns.Add(c);
         return dt;

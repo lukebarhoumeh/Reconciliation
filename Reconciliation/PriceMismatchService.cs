@@ -149,10 +149,22 @@ namespace Reconciliation
             string.Equals(Convert.ToString(r[column]), AzurePlan,
                           StringComparison.OrdinalIgnoreCase);
 
-        private static string MakeKey(DataRow r) =>
-            string.Join("|", KeyColumns.Select(c => r.Table.Columns.Contains(c)
-                                                   ? (r[c]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
-                                                   : string.Empty));
+        private static string MakeKey(DataRow r)
+        {
+            string customer = r.Table.Columns.Contains("CustomerDomainName")
+                ? Convert.ToString(r["CustomerDomainName"]) ?? string.Empty
+                : string.Empty;
+            if (string.IsNullOrWhiteSpace(customer) && r.Table.Columns.Contains("CustomerName"))
+                customer = Convert.ToString(r["CustomerName"]) ?? string.Empty;
+
+            string product = r.Table.Columns.Contains("ProductId")
+                ? Convert.ToString(r["ProductId"]) ?? string.Empty
+                : string.Empty;
+            if (string.IsNullOrWhiteSpace(product) && r.Table.Columns.Contains("PartNumber"))
+                product = Convert.ToString(r["PartNumber"]) ?? string.Empty;
+
+            return string.Join("|", customer.Trim().ToUpperInvariant(), product.Trim().ToUpperInvariant());
+        }
 
         private static decimal SafeDecimal(object? v) =>
             decimal.TryParse(Convert.ToString(v), NumberStyles.Any,

@@ -14,10 +14,13 @@ namespace Reconciliation
     /// </summary>
     public class BusinessKeyReconciliationService
     {
-        private static readonly string[] FinancialColumns =
+        private static readonly (string Hub,string Ms)[] FinancialColumns =
         {
-            "UnitPrice", "EffectiveUnitPrice", "Subtotal",
-            "TaxTotal",  "Total",             "Quantity"
+            ("PartnerUnitPrice", "UnitPrice"),
+            ("Quantity", "Quantity"),
+            ("PartnerSubTotal", "Subtotal"),
+            ("PartnerTaxTotal", "TaxTotal"),
+            ("PartnerTotal", "Total")
         };
 
         public string LastSummary { get; private set; } = string.Empty;
@@ -91,8 +94,8 @@ namespace Reconciliation
             // 5. Determine which financial columns both tables share
             //---------------------------------------------------------------
             var sharedFields = FinancialColumns
-                               .Where(c => ours.Columns.Contains(c) &&
-                                           microsoft.Columns.Contains(c))
+                               .Where(p => ours.Columns.Contains(p.Hub) &&
+                                           microsoft.Columns.Contains(p.Ms))
                                .ToArray();
 
             if (sharedFields.Length == 0)
@@ -136,13 +139,13 @@ namespace Reconciliation
                 bool rowMismatch = false;
                 foreach (var field in sharedFields)
                 {
-                    decimal oursTotal = ourRows.Sum(r => ValueParser.SafeDecimal(r[field]));
-                    decimal msTotal = msRowsList.Sum(r => ValueParser.SafeDecimal(r[field]));
+                    decimal oursTotal = ourRows.Sum(r => ValueParser.SafeDecimal(r[field.Hub]));
+                    decimal msTotal = msRowsList.Sum(r => ValueParser.SafeDecimal(r[field.Ms]));
 
                     if (Math.Abs(oursTotal - msTotal) <= AppConfig.Validation.NumericTolerance)
                         continue;
 
-                    AddMismatchRow(result, BuildFullKey(ourRows[0]), field,
+                    AddMismatchRow(result, BuildFullKey(ourRows[0]), field.Ms,
                                    oursTotal.ToString(CultureInfo.InvariantCulture),
                                    msTotal.ToString(CultureInfo.InvariantCulture));
                     mismatches++;
@@ -171,9 +174,13 @@ namespace Reconciliation
 
             foreach (DataRow row in table.Rows)
             {
-                if (!HasBasicKey(row)) continue;   // skip rows with missing essentials
+                if (!TryBuildGroupKey(row, out string key))
+                {
+                    int idx = table.Rows.IndexOf(row) + 1;
+                    SimpleLogger.Warn($"Skipping row {idx}: missing CustomerDomainName or ProductId");
+                    continue;
+                }
 
-                string key = BuildGroupKey(row);
                 if (!dict.TryGetValue(key, out var list))
                 {
                     list = new List<DataRow>();
@@ -189,13 +196,43 @@ namespace Reconciliation
         /// ChargeStartDate and SubscriptionId/Guid because those values often
         /// change between systems and would otherwise block legitimate matches.
         /// </summary>
-        private static string BuildGroupKey(DataRow row)
+        private static bool TryBuildGroupKey(DataRow row, out string key)
         {
-            string V(string col) => row.Table.Columns.Contains(col)
-                ? (row[col]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
-                : string.Empty;
+            string Customer()
+            {
+                if (row.Table.Columns.Contains("CustomerDomainName"))
+                {
+                    string v = Convert.ToString(row["CustomerDomainName"]) ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(v)) return v;
+                }
+                if (row.Table.Columns.Contains("CustomerName"))
+                    return Convert.ToString(row["CustomerName"]) ?? string.Empty;
+                return string.Empty;
+            }
 
-            return string.Join("|", V("CustomerDomainName"), V("ProductId"));
+            string Product()
+            {
+                if (row.Table.Columns.Contains("ProductId"))
+                {
+                    string v = Convert.ToString(row["ProductId"]) ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(v)) return v;
+                }
+                if (row.Table.Columns.Contains("PartNumber"))
+                    return Convert.ToString(row["PartNumber"]) ?? string.Empty;
+                return string.Empty;
+            }
+
+            string customer = Customer().Trim();
+            string product = Product().Trim();
+
+            if (string.IsNullOrWhiteSpace(customer) || string.IsNullOrWhiteSpace(product))
+            {
+                key = string.Empty;
+                return false;
+            }
+
+            key = string.Join("|", customer.ToUpperInvariant(), product.ToUpperInvariant());
+            return true;
         }
 
         /// <summary>
@@ -225,10 +262,6 @@ namespace Reconciliation
         #endregion
 
         #region Row‑level utilities
-        private static bool HasBasicKey(DataRow row) =>
-            new[] { "CustomerDomainName", "ProductId" }
-            .All(c => row.Table.Columns.Contains(c) &&
-                      !string.IsNullOrWhiteSpace(Convert.ToString(row[c])));
 
         private static bool ValuesEqual(string a, string b)
         {
