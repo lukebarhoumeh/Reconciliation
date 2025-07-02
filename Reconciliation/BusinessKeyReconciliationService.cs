@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 
 namespace Reconciliation
 {
@@ -70,6 +71,55 @@ namespace Reconciliation
                 }
             }
 
+            // --------------------------------------------------------------
+            // Diagnostic logging of unique keys after normalisation & mapping
+            // --------------------------------------------------------------
+            static string GetKey(DataRow row)
+            {
+                string cust = row.Table.Columns.Contains("CustomerDomainName")
+                    ? Convert.ToString(row["CustomerDomainName"]) ?? string.Empty
+                    : string.Empty;
+                string prod = row.Table.Columns.Contains("ProductId")
+                    ? Convert.ToString(row["ProductId"]) ?? string.Empty
+                    : string.Empty;
+                cust = cust.Trim().ToUpperInvariant();
+                prod = prod.Trim().ToUpperInvariant();
+                return string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod)
+                    ? string.Empty
+                    : string.Join("|", cust, prod);
+            }
+
+            var hubKeys = msphub.Rows.Cast<DataRow>()
+                .Select(GetKey)
+                .Where(k => !string.IsNullOrEmpty(k))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var msKeys = microsoft.Rows.Cast<DataRow>()
+                .Select(GetKey)
+                .Where(k => !string.IsNullOrEmpty(k))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            SimpleLogger.Info($"MSPHub keys ({hubKeys.Count}): {string.Join(", ", hubKeys)}");
+            SimpleLogger.Info($"Microsoft keys ({msKeys.Count}): {string.Join(", ", msKeys)}");
+            SimpleLogger.Info($"MSPHub unique keys: {hubKeys.Count}");
+            SimpleLogger.Info($"Microsoft unique keys: {msKeys.Count}");
+
+            var overlap = hubKeys.Intersect(msKeys, StringComparer.OrdinalIgnoreCase).ToList();
+            SimpleLogger.Info($"Overlap: {overlap.Count}. Sample: {string.Join(", ", overlap.Take(10))}");
+
+            foreach (var key in hubKeys.Except(msKeys, StringComparer.OrdinalIgnoreCase))
+                SimpleLogger.Warn($"Key missing in Microsoft: {key}");
+            int logged = 0;
+            foreach (var key in overlap)
+            {
+                if (logged < 10)
+                {
+                    SimpleLogger.Info($"Key matched: {key}");
+                    logged++;
+                }
+            }
+
             var hubGroups = Aggregate(msphub, microsoft: false);
             var msGroups  = Aggregate(microsoft, microsoft: true);
 
@@ -126,6 +176,13 @@ namespace Reconciliation
             }
 
             LastSummary = $"Matched: {matched} | Missing in Microsoft: {missingMs} | Missing in MSPHub: {missingHub} | Mismatched: {mismatched} | Data Errors: {errors}";
+            try
+            {
+                string logPath = Path.Combine(Directory.GetCurrentDirectory(),
+                    $"DiagnosticLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+                SimpleLogger.Export(logPath);
+            }
+            catch { /* ignore logging failures */ }
             return result;
         }
 
