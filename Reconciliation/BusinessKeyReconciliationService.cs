@@ -14,14 +14,6 @@ namespace Reconciliation
     /// </summary>
     public class BusinessKeyReconciliationService
     {
-        private static readonly (string Hub, string Ms)[] FinancialColumns =
-        {
-            ("Quantity",         "Quantity"),
-            ("PartnerUnitPrice", "UnitPrice"),
-            ("PartnerSubTotal",  "Subtotal"),
-            ("PartnerTotal",     "Total"),
-            ("PartnerTaxTotal",  "TaxTotal")
-        };
 
         private sealed class GroupTotals
         {
@@ -30,6 +22,7 @@ namespace Reconciliation
             public decimal Quantity { get; set; }
             public decimal Subtotal { get; set; }
             public decimal Total { get; set; }
+            // Stores a quantity-weighted sum of unit prices for averaging
             public decimal UnitPrice { get; set; }
             public decimal TaxTotal { get; set; }
             public bool HasError { get; set; }
@@ -48,18 +41,32 @@ namespace Reconciliation
             CsvPreProcessor.Process(msphub);
             CsvPreProcessor.Process(microsoft);
 
-            // filter Microsoft rows to the PartnerId present in MSPHub if both tables expose the column
+            // Filter Microsoft rows by PartnerId only if both sides contain a single matching ID
             if (msphub.Columns.Contains("PartnerId") && microsoft.Columns.Contains("PartnerId"))
             {
-                string pid = msphub.AsEnumerable()
+                var hubIds = msphub.AsEnumerable()
                                     .Select(r => Convert.ToString(r["PartnerId"]) ?? string.Empty)
-                                    .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
-                if (!string.IsNullOrEmpty(pid))
+                                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToArray();
+                var msIds = microsoft.AsEnumerable()
+                                   .Select(r => Convert.ToString(r["PartnerId"]) ?? string.Empty)
+                                   .Where(v => !string.IsNullOrWhiteSpace(v))
+                                   .Distinct(StringComparer.OrdinalIgnoreCase)
+                                   .ToArray();
+
+                if (hubIds.Length == 1 && msIds.Length == 1 &&
+                    string.Equals(hubIds[0], msIds[0], StringComparison.OrdinalIgnoreCase))
                 {
+                    string pid = hubIds[0];
                     var msRows = microsoft.AsEnumerable()
                         .Where(r => string.Equals(Convert.ToString(r["PartnerId"]), pid, StringComparison.OrdinalIgnoreCase))
                         .ToArray();
                     microsoft = msRows.Length > 0 ? msRows.CopyToDataTable() : microsoft.Clone();
+                }
+                else
+                {
+                    SimpleLogger.Warn("PartnerId mismatch between files - skipping filter.");
                 }
             }
 
@@ -67,13 +74,28 @@ namespace Reconciliation
             var msGroups  = Aggregate(microsoft, microsoft: true);
 
             var result = BuildResultTable();
-            int matched = 0, missing = 0, mismatched = 0, errors = 0;
+            int matched = 0, missingMs = 0, missingHub = 0, mismatched = 0, errors = 0;
 
             SimpleLogger.Info($"Aggregated MSPHub keys: {hubGroups.Count}; MS keys: {msGroups.Count}");
 
-            foreach (var key in hubGroups.Keys)
+            var allKeys = new HashSet<string>(hubGroups.Keys, StringComparer.OrdinalIgnoreCase);
+            allKeys.UnionWith(msGroups.Keys);
+
+            foreach (var key in allKeys)
             {
-                var ours = hubGroups[key];
+                hubGroups.TryGetValue(key, out var ours);
+                msGroups.TryGetValue(key, out var theirs);
+
+                if (ours == null)
+                {
+                    if (theirs != null)
+                    {
+                        AddMissingInHubRow(result, theirs);
+                        SimpleLogger.Warn($"Key {key} missing in MSPHub results");
+                        missingHub++;
+                    }
+                    continue;
+                }
 
                 if (ours.HasError)
                 {
@@ -83,11 +105,11 @@ namespace Reconciliation
                     continue;
                 }
 
-                if (!msGroups.TryGetValue(key, out var theirs))
+                if (theirs == null)
                 {
                     AddMissingRow(result, ours);
                     SimpleLogger.Warn($"Key {key} missing in Microsoft results");
-                    missing++;
+                    missingMs++;
                     continue;
                 }
 
@@ -103,7 +125,7 @@ namespace Reconciliation
                 }
             }
 
-            LastSummary = $"Matched: {matched} | Missing in Microsoft: {missing} | Mismatched: {mismatched} | Data Errors: {errors}";
+            LastSummary = $"Matched: {matched} | Missing in Microsoft: {missingMs} | Missing in MSPHub: {missingHub} | Mismatched: {mismatched} | Data Errors: {errors}";
             return result;
         }
 
@@ -138,22 +160,12 @@ namespace Reconciliation
                 if (string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod))
                     totals.HasError = true;
 
-                if (microsoft)
-                {
-                    totals.Quantity += SafeDecimal(row, "Quantity");
-                    totals.Subtotal += SafeDecimal(row, "Subtotal");
-                    totals.Total += SafeDecimal(row, "Total");
-                    totals.UnitPrice += SafeDecimal(row, "UnitPrice");
-                    totals.TaxTotal += SafeDecimal(row, "TaxTotal");
-                }
-                else
-                {
-                    totals.Quantity += SafeDecimal(row, "Quantity");
-                    totals.Subtotal += SafeDecimal(row, "PartnerSubTotal");
-                    totals.Total += SafeDecimal(row, "PartnerTotal");
-                    totals.UnitPrice += SafeDecimal(row, "PartnerUnitPrice");
-                    totals.TaxTotal += SafeDecimal(row, "PartnerTaxTotal");
-                }
+                decimal qty = SafeDecimal(row, "Quantity");
+                totals.Quantity += qty;
+                totals.Subtotal += SafeDecimal(row, "Subtotal", "PartnerSubTotal");
+                totals.Total += SafeDecimal(row, "Total", "PartnerTotal");
+                totals.UnitPrice += SafeDecimal(row, "UnitPrice", "PartnerUnitPrice") * qty;
+                totals.TaxTotal += SafeDecimal(row, "TaxTotal", "PartnerTaxTotal");
             }
 
             return groups;
@@ -165,7 +177,6 @@ namespace Reconciliation
             return Math.Abs(hub.Quantity - ms.Quantity) <= tol &&
                    Math.Abs(hub.Subtotal - ms.Subtotal) <= tol &&
                    Math.Abs(hub.Total - ms.Total) <= tol &&
-                   Math.Abs(hub.UnitPrice - ms.UnitPrice) <= tol &&
                    Math.Abs(hub.TaxTotal - ms.TaxTotal) <= tol;
         }
 
@@ -175,7 +186,11 @@ namespace Reconciliation
         private static decimal SafeDecimal(DataRow row, string colA, string colB)
         {
             if (row.Table.Columns.Contains(colA))
-                return ValueParser.SafeDecimal(row[colA]);
+            {
+                string raw = Convert.ToString(row[colA]) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(raw))
+                    return ValueParser.SafeDecimal(raw);
+            }
             if (row.Table.Columns.Contains(colB))
                 return ValueParser.SafeDecimal(row[colB]);
             return 0m;
@@ -215,10 +230,29 @@ namespace Reconciliation
             r["MSSubtotal"] = 0m;
             r["HubTotal"] = ours.Total;
             r["MSTotal"] = 0m;
-            r["HubUnitPrice"] = ours.UnitPrice;
+            r["HubUnitPrice"] = ours.Quantity == 0 ? 0m : ours.UnitPrice / ours.Quantity;
             r["MSUnitPrice"] = 0m;
             r["HubTaxTotal"] = ours.TaxTotal;
             r["MSTaxTotal"] = 0m;
+            table.Rows.Add(r);
+        }
+
+        private static void AddMissingInHubRow(DataTable table, GroupTotals theirs)
+        {
+            var r = table.NewRow();
+            r["CustomerDomainName"] = theirs.CustomerDomain;
+            r["ProductId"] = theirs.ProductId;
+            r["Status"] = "Missing in MSPHub";
+            r["HubQuantity"] = 0m;
+            r["MSQuantity"] = theirs.Quantity;
+            r["HubSubtotal"] = 0m;
+            r["MSSubtotal"] = theirs.Subtotal;
+            r["HubTotal"] = 0m;
+            r["MSTotal"] = theirs.Total;
+            r["HubUnitPrice"] = 0m;
+            r["MSUnitPrice"] = theirs.Quantity == 0 ? 0m : theirs.UnitPrice / theirs.Quantity;
+            r["HubTaxTotal"] = 0m;
+            r["MSTaxTotal"] = theirs.TaxTotal;
             table.Rows.Add(r);
         }
 
@@ -234,7 +268,7 @@ namespace Reconciliation
             r["MSSubtotal"] = 0m;
             r["HubTotal"] = ours.Total;
             r["MSTotal"] = 0m;
-            r["HubUnitPrice"] = ours.UnitPrice;
+            r["HubUnitPrice"] = ours.Quantity == 0 ? 0m : ours.UnitPrice / ours.Quantity;
             r["MSUnitPrice"] = 0m;
             r["HubTaxTotal"] = ours.TaxTotal;
             r["MSTaxTotal"] = 0m;
@@ -253,8 +287,8 @@ namespace Reconciliation
             r["MSSubtotal"] = ms.Subtotal;
             r["HubTotal"] = hub.Total;
             r["MSTotal"] = ms.Total;
-            r["HubUnitPrice"] = hub.UnitPrice;
-            r["MSUnitPrice"] = ms.UnitPrice;
+            r["HubUnitPrice"] = hub.Quantity == 0 ? 0m : hub.UnitPrice / hub.Quantity;
+            r["MSUnitPrice"] = ms.Quantity == 0 ? 0m : ms.UnitPrice / ms.Quantity;
             r["HubTaxTotal"] = hub.TaxTotal;
             r["MSTaxTotal"] = ms.TaxTotal;
             table.Rows.Add(r);
@@ -272,8 +306,8 @@ namespace Reconciliation
             r["MSSubtotal"] = ms.Subtotal;
             r["HubTotal"] = hub.Total;
             r["MSTotal"] = ms.Total;
-            r["HubUnitPrice"] = hub.UnitPrice;
-            r["MSUnitPrice"] = ms.UnitPrice;
+            r["HubUnitPrice"] = hub.Quantity == 0 ? 0m : hub.UnitPrice / hub.Quantity;
+            r["MSUnitPrice"] = ms.Quantity == 0 ? 0m : ms.UnitPrice / ms.Quantity;
             r["HubTaxTotal"] = hub.TaxTotal;
             r["MSTaxTotal"] = ms.TaxTotal;
             table.Rows.Add(r);
