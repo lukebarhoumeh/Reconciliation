@@ -105,24 +105,13 @@ namespace Reconciliation
             // 6. Core reconciliation loop
             //---------------------------------------------------------------
             var result = BuildResultTable();
-            int onlyOur = 0, onlyMs = 0, mismatches = 0, perfect = 0;
+            int missingInMicrosoft = 0, mismatches = 0, perfect = 0;
 
-            foreach (var key in oursGroups.Keys.Union(msGroups.Keys,
-                                                      StringComparer.OrdinalIgnoreCase))
+            // Iterate only over MSPHub rows; Microsoft-only rows are ignored.
+            foreach (var key in oursGroups.Keys)
             {
-                oursGroups.TryGetValue(key, out var ourRows);
+                var ourRows = oursGroups[key];
                 msGroups.TryGetValue(key, out var msRowsList);
-
-                // -------- Only in Microsoft --------------------------------
-                if (ourRows == null)
-                {
-                    foreach (var row in msRowsList!)
-                    {
-                        AddMissingRow(result, BuildFullKey(row), "Missing in MSP‑Hub");
-                        onlyMs++;
-                    }
-                    continue;
-                }
 
                 // -------- Only in MSP‑Hub ----------------------------------
                 if (msRowsList == null)
@@ -130,7 +119,7 @@ namespace Reconciliation
                     foreach (var row in ourRows)
                     {
                         AddMissingRow(result, BuildFullKey(row), "Missing in Microsoft");
-                        onlyOur++;
+                        missingInMicrosoft++;
                     }
                     continue;
                 }
@@ -158,8 +147,7 @@ namespace Reconciliation
             //---------------------------------------------------------------
             // 7. Summary & return
             //---------------------------------------------------------------
-            LastSummary = $"Perfect:{perfect} | Only-MSP:{onlyOur} | " +
-                          $"Only-MS:{onlyMs} | Diff:{mismatches}";
+            LastSummary = $"Perfect:{perfect} | Missing-MS:{missingInMicrosoft} | Diff:{mismatches}";
             SimpleLogger.Info($"Tenant {partnerId}: {LastSummary}");
             return result;
         }

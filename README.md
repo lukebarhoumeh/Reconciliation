@@ -41,7 +41,8 @@ can be unit tested without the WinForms UI.
 `BusinessKeyReconciliationService` provides stricter business-key matching and
 financial comparison. Column aliases like `DomainUrl` or `SubscriptionGuid`
 are normalised automatically and the summary logs now show kid-friendly
-counts of perfect matches, missing rows and mismatches.
+counts of perfect matches, missing rows and mismatches. Rows that appear only
+in the Microsoft invoice are ignored so the tool works for any MSPHub partner.
 
 ```csharp
 var svc = new BusinessKeyReconciliationService();
