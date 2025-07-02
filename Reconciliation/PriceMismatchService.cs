@@ -1,87 +1,100 @@
+﻿using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using System;
 using System.Data;
-using System.Linq;
 using System.Drawing;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
+using System.Globalization;
+using System.Linq;
 
 namespace Reconciliation
 {
     /// <summary>
-    /// Provides price mismatch detection and Excel export functionality.
+    /// Detects price or quantity mismatches between MSP‑Hub and Microsoft invoices
+    /// and exports them to Excel.
     /// </summary>
     public class PriceMismatchService
     {
-        private readonly string[] _keyColumns = new[]
+        // ------------------------------------------------------------------
+        //  Configuration
+        // ------------------------------------------------------------------
+        private static readonly string[] KeyColumns =
         {
             "CustomerDomainName",
             "ProductId",
-            "SkuId",
-            "ChargeType",
+            "ChargeStartDate",   // prevents cross‑period aggregation
             "Term",
             "BillingCycle"
         };
 
-        private readonly string[] _aggregateColumns = new[]
-        {
-            "CustomerDomainName",
-            "ProductId",
-            "SkuId",
-            "Term",
-            "BillingCycle"
-        };
+        private const string AzurePlan = "Azure plan";
 
-        /// <summary>
-        /// Returns rows where total price differs between MSP Hub and Microsoft invoices.
-        /// </summary>
+        // ------------------------------------------------------------------
+        //  Public API
+        // ------------------------------------------------------------------
         public DataTable GetPriceMismatches(DataTable msphub, DataTable microsoft)
         {
             if (msphub == null) throw new ArgumentNullException(nameof(msphub));
             if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
 
-            var filteredHub = msphub.AsEnumerable()
-                .Where(r => !string.Equals(r["ProductName"].ToString(), "Azure plan", StringComparison.OrdinalIgnoreCase))
-                .CopyToDataTable();
-            var filteredMs = microsoft.AsEnumerable()
-                .Where(r => !string.Equals(r["SubscriptionDescription"].ToString(), "Azure plan", StringComparison.OrdinalIgnoreCase))
-                .CopyToDataTable();
+            // 1. Remove Azure‑plan usage rows (not licence seats)
+            var hubFiltered = msphub.AsEnumerable()
+                                    .Where(r => !IsAzurePlan(r, "ProductName"))
+                                    .ToArray();
 
-            DataTable result = msphub.Clone();
-            result.Columns.Add("PriceInSixDotOne", typeof(decimal));
-            result.Columns.Add("PriceInMicrosoft", typeof(decimal));
-            result.Columns.Add("PriceDifference", typeof(decimal));
+            var msFiltered = microsoft.AsEnumerable()
+                                       .Where(r => !IsAzurePlan(r, "SubscriptionDescription"))
+                                       .ToArray();
 
-            var groupedHub = filteredHub.AsEnumerable()
-                .GroupBy(row => string.Join("|", _aggregateColumns.Select(c => row[c])));
-            var groupedMs = filteredMs.AsEnumerable()
-                .GroupBy(row => string.Join("|", _aggregateColumns.Select(c => row[c])));
+            if (hubFiltered.Length == 0 || msFiltered.Length == 0)
+                return msphub.Clone();   // nothing left to compare
 
-            foreach (var hubGroup in groupedHub)
+            // 2. Group by deterministic key
+            var hubGroups = hubFiltered.GroupBy(MakeKey);
+            var msGroups = msFiltered.GroupBy(MakeKey)
+                                      .ToDictionary(g => g.Key, g => g);
+
+            // 3. Result table
+            var result = msphub.Clone();
+            result.Columns.Add("HubQuantity", typeof(decimal));
+            result.Columns.Add("MSQuantity", typeof(decimal));
+            result.Columns.Add("HubSubtotal", typeof(decimal));
+            result.Columns.Add("MSSubtotal", typeof(decimal));
+            result.Columns.Add("QuantityDiff", typeof(decimal));
+            result.Columns.Add("PriceDiff", typeof(decimal));
+
+            // 4. Comparison loop
+            foreach (var hGroup in hubGroups)
             {
-                var msGroup = groupedMs.FirstOrDefault(g => g.Key == hubGroup.Key);
-                if (msGroup == null) continue;
+                if (!msGroups.TryGetValue(hGroup.Key, out var mGroup))
+                    continue;       // appears only in MSP‑Hub: handled elsewhere
 
-                decimal qtyHub = hubGroup.Sum(r => SafeDecimal(r["Quantity"]));
-                decimal priceHub = hubGroup.Sum(r => SafeDecimal(r["EffectiveUnitPrice"]) * SafeDecimal(r["Quantity"]));
-                decimal priceMs = msGroup.Sum(r => SafeDecimal(r["EffectiveUnitPrice"]) * SafeDecimal(r["Quantity"]));
-                decimal diff = priceHub - priceMs;
-                if (diff == 0) continue;
+                decimal hubQty = hGroup.Sum(r => SafeDecimal(r["Quantity"]));
+                decimal hubSub = hGroup.Sum(r => SafeDecimal(r["Subtotal"]));
+                decimal msQty = mGroup.Sum(r => SafeDecimal(r["Quantity"]));
+                decimal msSub = mGroup.Sum(r => SafeDecimal(r["Subtotal"]));
 
-                DataRow row = result.NewRow();
-                var keys = hubGroup.Key.Split('|');
-                for (int i = 0; i < _aggregateColumns.Length; i++)
-                    row[_aggregateColumns[i]] = keys[i];
-                row["ChargeType"] = string.Join(", ", hubGroup.Select(r => r["ChargeType"]).Distinct());
-                foreach (DataColumn col in filteredHub.Columns)
-                {
-                    if (_aggregateColumns.Contains(col.ColumnName) || col.ColumnName == "ChargeType" || col.ColumnName == "Quantity")
-                        continue;
-                    row[col.ColumnName] = hubGroup.First()[col];
-                }
-                row["Quantity"] = qtyHub;
-                row["PriceInSixDotOne"] = priceHub;
-                row["PriceInMicrosoft"] = priceMs;
-                row["PriceDifference"] = diff;
+                decimal qtyDiff = hubQty - msQty;
+                decimal subDiff = hubSub - msSub;
+
+                if (Math.Abs(qtyDiff) <= AppConfig.Validation.NumericTolerance &&
+                    Math.Abs(subDiff) <= AppConfig.Validation.NumericTolerance)
+                    continue;       // no material difference
+
+                // 5. Write one representative row
+                var row = result.NewRow();
+                var parts = hGroup.Key.Split('|');
+                for (int i = 0; i < KeyColumns.Length; i++)
+                    row[KeyColumns[i]] = parts[i];
+
+                row["ChargeType"] = string.Join(", ",
+                                        hGroup.Select(r => r["ChargeType"]).Distinct());
+                row["HubQuantity"] = hubQty;
+                row["MSQuantity"] = msQty;
+                row["HubSubtotal"] = hubSub;
+                row["MSSubtotal"] = msSub;
+                row["QuantityDiff"] = qtyDiff;
+                row["PriceDiff"] = subDiff;
+
                 result.Rows.Add(row);
             }
 
@@ -89,64 +102,59 @@ namespace Reconciliation
         }
 
         /// <summary>
-        /// Exports mismatched rows to an Excel file with colored headers.
+        /// Simple Excel export with header styling and auto‑fit.
         /// </summary>
         public void ExportPriceMismatchesToExcel(DataTable mismatches, string filePath)
         {
             if (mismatches == null) throw new ArgumentNullException(nameof(mismatches));
             if (filePath == null) throw new ArgumentNullException(nameof(filePath));
 
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
             using var package = new ExcelPackage();
-            ExcelWorksheet ws = package.Workbook.Worksheets.Add("Sheet1");
-            AddHeaderRow(mismatches, ws);
-            AddDataRowsWithColor(mismatches, ws);
+            var ws = package.Workbook.Worksheets.Add("Mismatches");
+
+            // header
+            for (int c = 0; c < mismatches.Columns.Count; c++)
+            {
+                var cell = ws.Cells[1, c + 1];
+                cell.Value = mismatches.Columns[c].ColumnName;
+                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                cell.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9EAF7"));
+                cell.Style.Font.Bold = true;
+                cell.Style.Border.BorderAround(ExcelBorderStyle.Thin, Color.Black);
+            }
+
+            // rows
+            for (int r = 0; r < mismatches.Rows.Count; r++)
+            {
+                for (int c = 0; c < mismatches.Columns.Count; c++)
+                {
+                    var cell = ws.Cells[r + 2, c + 1];
+                    cell.Value = mismatches.Rows[r][c];
+                    cell.Style.Border.BorderAround(ExcelBorderStyle.Thin, Color.Black);
+                }
+            }
+
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
             package.SaveAs(new System.IO.FileInfo(filePath));
         }
 
-        private static decimal SafeDecimal(object? value)
-        {
-            if (value == null || value == DBNull.Value) return 0m;
-            return Convert.ToDecimal(value);
-        }
+        // ------------------------------------------------------------------
+        //  Helpers
+        // ------------------------------------------------------------------
+        private static bool IsAzurePlan(DataRow r, string column) =>
+            r.Table.Columns.Contains(column) &&
+            string.Equals(Convert.ToString(r[column]), AzurePlan,
+                          StringComparison.OrdinalIgnoreCase);
 
-        private static void AddHeaderRow(DataTable table, ExcelWorksheet ws)
-        {
-            for (int col = 0; col < table.Columns.Count; col++)
-            {
-                var header = ws.Cells[1, col + 1];
-                header.Value = table.Columns[col].ColumnName;
-                header.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                header.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9EAF7"));
-                header.Style.Font.Bold = true;
-                header.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                header.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                header.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                header.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-                header.Style.Border.Top.Color.SetColor(Color.Black);
-                header.Style.Border.Bottom.Color.SetColor(Color.Black);
-                header.Style.Border.Left.Color.SetColor(Color.Black);
-                header.Style.Border.Right.Color.SetColor(Color.Black);
-            }
-        }
+        private static string MakeKey(DataRow r) =>
+            string.Join("|", KeyColumns.Select(c => (r[c]?.ToString() ?? string.Empty)
+                                                   .Trim()
+                                                   .ToUpperInvariant()));
 
-        private static void AddDataRowsWithColor(DataTable table, ExcelWorksheet ws)
-        {
-            for (int r = 0; r < table.Rows.Count; r++)
-            {
-                for (int c = 0; c < table.Columns.Count; c++)
-                {
-                    var cell = ws.Cells[r + 2, c + 1];
-                    cell.Value = table.Rows[r][c];
-                    cell.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                    cell.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                    cell.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                    cell.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-                    cell.Style.Border.Top.Color.SetColor(Color.Black);
-                    cell.Style.Border.Bottom.Color.SetColor(Color.Black);
-                    cell.Style.Border.Left.Color.SetColor(Color.Black);
-                    cell.Style.Border.Right.Color.SetColor(Color.Black);
-                }
-            }
-        }
+        private static decimal SafeDecimal(object? v) =>
+            decimal.TryParse(Convert.ToString(v), NumberStyles.Any,
+                             CultureInfo.InvariantCulture, out var d) ? d : 0m;
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Data;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace Reconciliation;
 
@@ -14,54 +13,60 @@ public static class CsvPreProcessor
     /// <summary>
     /// Apply standard column mappings and ensure required financial columns exist.
     /// </summary>
-public static void Process(DataTable table, bool isMicrosoft = false)
+    public static void Process(DataTable table)
     {
         if (table == null) throw new ArgumentNullException(nameof(table));
 
-        // Apply header aliases
-        var baseAlias = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        // --- Aliases for all IDs and financial columns (applies to both tables) ---
+        var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            { "PartnerID", "PartnerId" },
-            { "DomainUrl", "CustomerDomainName" },
-            { "CustomerName", "CustomerDomainName" },
-            { "CustomerId", "CustomerDomainName" },
-            { "ProductGuid", "ProductId" },
-            { "MPNId", "ProductId" },
-            { "BillableQuantity", "Quantity" },
-            { "SubId", "SubscriptionId" }
+            // --- IDs (for key matching) ---
+            { "SubscriptionGuid", "SubscriptionId" },
+            { "SubId",           "SubscriptionId" },
+            { "CustomerName",    "CustomerDomainName" },
+            { "CustomerId",      "CustomerDomainName" },
+            { "DomainUrl",       "CustomerDomainName" },
+            { "ProductGuid",     "ProductId" },
+            { "MPNId",           "ProductId" },
+            // --- Financial fields ---
+            { "PartnerUnitPrice",          "UnitPrice" },
+            { "PartnerEffectiveUnitPrice", "EffectiveUnitPrice" },
+            { "PartnerSubTotal",           "Subtotal" },
+            { "PartnerTotal",              "Total" },
+            { "MSRP",                      "MSRPPrice" },
+            { "BillableQuantity",          "Quantity" }
         };
 
-        foreach (var kvp in baseAlias)
+        foreach (var kvp in aliasMap)
             Rename(table, kvp.Key, kvp.Value);
 
-        if (isMicrosoft)
-        {
-            var msAlias = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "SubscriptionGUID", "SubscriptionId" },
-                { "PartnerUnitPrice", "UnitPrice" },
-                { "PartnerSubTotal", "Subtotal" },
-                { "PartnerTotal", "Total" }
-            };
-            foreach (var kvp in msAlias)
-                Rename(table, kvp.Key, kvp.Value);
-        }
-
-        Rename(table, "PartnerEffectiveUnitPrice", "EffectiveUnitPrice");
-        Rename(table, "MSRP", "MSRPPrice");
-
-        foreach (var col in new[] { "UnitPrice", "EffectiveUnitPrice", "Subtotal", "TaxTotal", "Total" })
+        // Ensure all needed columns exist for downstream logic
+        foreach (var col in new[] {
+            "UnitPrice", "EffectiveUnitPrice", "Subtotal", "TaxTotal", "Total", "MSRPPrice",
+            "Quantity", "SubscriptionId", "ProductId", "CustomerDomainName", "ChargeType", "ChargeStartDate"
+        })
         {
             if (!table.Columns.Contains(col))
                 table.Columns.Add(col, typeof(string));
         }
 
-        // Normalise key fields (trim, upper, date format)
-        DataNormaliser.Normalise(table, new[]
+        // Normalise key fields: upper-case, trimmed, and charge dates to yyyy-MM-dd
+        foreach (DataRow row in table.Rows)
         {
-            "CustomerDomainName","ProductId","ChargeType","ChargeStartDate",
-            "SubscriptionId","SubscriptionGuid"
-        });
+            foreach (var key in new[] { "CustomerDomainName", "ProductId", "ChargeType", "SubscriptionId" })
+            {
+                if (table.Columns.Contains(key) && row[key] != null)
+                    row[key] = row[key].ToString()!.Trim().ToUpperInvariant();
+            }
+            // Normalize ChargeStartDate for reliable keying
+            if (table.Columns.Contains("ChargeStartDate") && row["ChargeStartDate"] != null)
+            {
+                if (DateTime.TryParse(row["ChargeStartDate"].ToString(), out var d))
+                    row["ChargeStartDate"] = d.ToString("yyyy-MM-dd");
+                else
+                    row["ChargeStartDate"] = row["ChargeStartDate"].ToString()!.Trim();
+            }
+        }
     }
 
     private static void Rename(DataTable table, string oldName, string newName)
@@ -69,7 +74,6 @@ public static void Process(DataTable table, bool isMicrosoft = false)
         if (!table.Columns.Contains(oldName)) return;
         if (table.Columns.Contains(newName))
             table.Columns.Remove(newName);
-        if (!table.Columns.Contains(oldName)) return;
         table.Columns[oldName].ColumnName = newName;
     }
 }
