@@ -39,7 +39,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Single(result.Rows);
-        Assert.Equal("Missing in Microsoft", result.Rows[0]["Explanation"]);
+        Assert.Equal("Missing in Microsoft", result.Rows[0]["Status"]);
     }
 
     [Fact]
@@ -54,8 +54,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Single(result.Rows);
-        Assert.Equal("Total", result.Rows[0]["Field Name"]);
-        Assert.Contains("Mismatch in Total", result.Rows[0]["Explanation"].ToString());
+        Assert.Equal("Mismatched", result.Rows[0]["Status"]);
     }
 
     [Fact]
@@ -117,7 +116,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -133,7 +132,7 @@ public class BusinessKeyReconciliationServiceTests
         var diff = svc.Reconcile(ours, ms);
 
         Assert.Empty(diff.Rows);
-        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -149,7 +148,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -167,7 +166,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -184,7 +183,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0", svc.LastSummary);
     }
 }
 
