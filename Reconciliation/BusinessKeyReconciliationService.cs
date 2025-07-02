@@ -7,10 +7,10 @@ using System.Linq;
 namespace Reconciliation
 {
     /// <summary>
-    /// Reconciles two invoice tables on a minimal, stable business key:
-    /// CustomerDomainName + ProductId + ChargeStartDate (±1 day).
-    /// All other columns – ChargeType, SubscriptionId/Guid, etc. –
-    /// are compared only *after* a key match has been found.
+    /// Reconciles two invoice tables using a minimal business key:
+    /// CustomerDomainName + ProductId. All other columns – ChargeType,
+    /// SubscriptionId/Guid, dates, etc. – are compared only after a key
+    /// match has been found.
     /// </summary>
     public class BusinessKeyReconciliationService
     {
@@ -132,47 +132,24 @@ namespace Reconciliation
                     continue;
                 }
 
-                // -------- Matched key – compare row by row -----------------
-                var msRemaining = new List<DataRow>(msRowsList);
-
-                foreach (var or in ourRows)
+                // -------- Matched key – aggregate financials ----------------
+                bool rowMismatch = false;
+                foreach (var field in sharedFields)
                 {
-                    // date tolerance ±1 day
-                    DateTime oDate = ParseDate(or["ChargeStartDate"]);
-                    int idx = msRemaining.FindIndex(r =>
-                        Math.Abs((ParseDate(r["ChargeStartDate"]) - oDate).Days) <= 1);
+                    decimal oursTotal = ourRows.Sum(r => SafeDecimal(r[field]));
+                    decimal msTotal = msRowsList.Sum(r => SafeDecimal(r[field]));
 
-                    if (idx == -1)
-                    {
-                        AddMissingRow(result, BuildFullKey(or), "Missing in Microsoft");
-                        onlyOur++;
+                    if (Math.Abs(oursTotal - msTotal) <= AppConfig.Validation.NumericTolerance)
                         continue;
-                    }
 
-                    var msr = msRemaining[idx];
-                    msRemaining.RemoveAt(idx);
-
-                    bool rowMismatch = false;
-                    foreach (var field in sharedFields)
-                    {
-                        string a = Convert.ToString(or[field]) ?? string.Empty;
-                        string b = Convert.ToString(msr[field]) ?? string.Empty;
-
-                        if (ValuesEqual(a, b)) continue;
-
-                        AddMismatchRow(result, BuildFullKey(or), field, a, b);
-                        mismatches++;
-                        rowMismatch = true;
-                    }
-                    if (!rowMismatch) perfect++;
+                    AddMismatchRow(result, BuildFullKey(ourRows[0]), field,
+                                   oursTotal.ToString(CultureInfo.InvariantCulture),
+                                   msTotal.ToString(CultureInfo.InvariantCulture));
+                    mismatches++;
+                    rowMismatch = true;
                 }
 
-                // Any MS rows left over did not find a partner
-                foreach (var msr in msRemaining)
-                {
-                    AddMissingRow(result, BuildFullKey(msr), "Missing in MSP‑Hub");
-                    onlyMs++;
-                }
+                if (!rowMismatch) perfect++;
             }
 
             //---------------------------------------------------------------
@@ -208,21 +185,17 @@ namespace Reconciliation
         }
 
         /// <summary>
-        /// Key used *only* for grouping.  It deliberately excludes ChargeType
-        /// and SubscriptionId/Guid because those values often change between
-        /// systems and would otherwise block legitimate matches.
+        /// Key used only for grouping. It deliberately excludes ChargeType,
+        /// ChargeStartDate and SubscriptionId/Guid because those values often
+        /// change between systems and would otherwise block legitimate matches.
         /// </summary>
         private static string BuildGroupKey(DataRow row)
         {
-            string V(string col) => (row[col]?.ToString() ?? string.Empty)
-                                    .Trim()
-                                    .ToUpperInvariant();
+            string V(string col) => row.Table.Columns.Contains(col)
+                ? (row[col]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
+                : string.Empty;
 
-            string date = DateTime.TryParse(V("ChargeStartDate"), out var d)
-                            ? d.ToString("yyyy-MM-dd")
-                            : V("ChargeStartDate");
-
-            return string.Join("|", V("CustomerDomainName"), V("ProductId"), date);
+            return string.Join("|", V("CustomerDomainName"), V("ProductId"));
         }
 
         /// <summary>
@@ -232,17 +205,15 @@ namespace Reconciliation
         /// </summary>
         private static string BuildFullKey(DataRow row)
         {
-            string V(string col) => (row[col]?.ToString() ?? string.Empty)
-                                    .Trim()
-                                    .ToUpperInvariant();
+            string V(string col) => row.Table.Columns.Contains(col)
+                ? (row[col]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
+                : string.Empty;
 
             string sub = V("SubscriptionId");
             if (string.IsNullOrEmpty(sub) && row.Table.Columns.Contains("SubscriptionGuid"))
                 sub = V("SubscriptionGuid");
 
-            string date = DateTime.TryParse(V("ChargeStartDate"), out var d)
-                            ? d.ToString("yyyy-MM-dd")
-                            : V("ChargeStartDate");
+            string date = V("ChargeStartDate");
 
             return string.Join("|",
                 V("CustomerDomainName"),
@@ -255,13 +226,9 @@ namespace Reconciliation
 
         #region Row‑level utilities
         private static bool HasBasicKey(DataRow row) =>
-            new[] { "CustomerDomainName", "ProductId", "ChargeStartDate" }
+            new[] { "CustomerDomainName", "ProductId" }
             .All(c => row.Table.Columns.Contains(c) &&
                       !string.IsNullOrWhiteSpace(Convert.ToString(row[c])));
-
-        private static DateTime ParseDate(object? val) =>
-            DateTime.TryParse(Convert.ToString(val), out var dt) ? dt.Date
-                                                                 : DateTime.MinValue;
 
         private static bool ValuesEqual(string a, string b)
         {
