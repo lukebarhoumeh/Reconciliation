@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Business-key reconciliation uses alias mapping and logs kid-friendly summary buckets.
+- Business-key reconciliation now reports "Matched", "Missing in Microsoft" and "Mismatched" counts.
 - Tenant slice and alias fixes ensure Microsoft rows are filtered to the MSP tenant and SubscriptionGUID is recognised.
 - Updated tests to target only `net8.0` and fixed build on non-Windows hosts.
 - Removed leftover `RowPrePaint` event wiring in `Form1`.
