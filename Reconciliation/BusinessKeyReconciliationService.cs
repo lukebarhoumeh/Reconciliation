@@ -32,9 +32,8 @@ namespace Reconciliation
             public decimal Total { get; set; }
             public decimal UnitPrice { get; set; }
             public decimal TaxTotal { get; set; }
+            public bool HasError { get; set; }
         }
-
-        private sealed record InvalidRow(string CustomerDomain, string ProductId);
 
         public string LastSummary { get; private set; } = string.Empty;
 
@@ -64,23 +63,29 @@ namespace Reconciliation
                 }
             }
 
-            var (hubGroups, hubErrors) = Aggregate(msphub);
-            var (msGroups, _) = Aggregate(microsoft);
+            var hubGroups = Aggregate(msphub, microsoft: false);
+            var msGroups  = Aggregate(microsoft, microsoft: true);
 
             var result = BuildResultTable();
-            int matched = 0, missing = 0, mismatched = 0;
-
-            foreach (var err in hubErrors)
-                AddDataErrorRow(result, err);
+            int matched = 0, missing = 0, mismatched = 0, errors = 0;
 
             SimpleLogger.Info($"Aggregated MSPHub keys: {hubGroups.Count}; MS keys: {msGroups.Count}");
 
             foreach (var key in hubGroups.Keys)
             {
                 var ours = hubGroups[key];
+
+                if (ours.HasError)
+                {
+                    AddDataErrorRow(result, ours);
+                    SimpleLogger.Warn($"Key {key} has missing CustomerDomainName or ProductId");
+                    errors++;
+                    continue;
+                }
+
                 if (!msGroups.TryGetValue(key, out var theirs))
                 {
-                    AddSimpleRow(result, key, "Missing in Microsoft");
+                    AddMissingRow(result, ours);
                     SimpleLogger.Warn($"Key {key} missing in Microsoft results");
                     missing++;
                     continue;
@@ -98,7 +103,6 @@ namespace Reconciliation
                 }
             }
 
-            int errors = hubErrors.Count;
             LastSummary = $"Matched: {matched} | Missing in Microsoft: {missing} | Mismatched: {mismatched} | Data Errors: {errors}";
             return result;
         }
@@ -107,21 +111,23 @@ namespace Reconciliation
         //  Helpers
         // ==================================================================
         #region Group‑key builders
-        private (Dictionary<string, GroupTotals> Groups, List<InvalidRow> Errors) Aggregate(DataTable table)
+        private Dictionary<string, GroupTotals> Aggregate(DataTable table, bool microsoft)
         {
             var groups = new Dictionary<string, GroupTotals>(StringComparer.OrdinalIgnoreCase);
-            var errors = new List<InvalidRow>();
-            int index = 1;
 
             foreach (DataRow row in table.Rows)
             {
-                if (!TryBuildGroupKey(row, out string key, out string cust, out string prod))
-                {
-                    errors.Add(new InvalidRow(cust, prod));
-                    SimpleLogger.Warn($"Skipping row {index}: missing CustomerDomainName or ProductId");
-                    index++;
-                    continue;
-                }
+                string cust = row.Table.Columns.Contains("CustomerDomainName")
+                    ? Convert.ToString(row["CustomerDomainName"]) ?? string.Empty
+                    : string.Empty;
+                string prod = row.Table.Columns.Contains("ProductId")
+                    ? Convert.ToString(row["ProductId"]) ?? string.Empty
+                    : string.Empty;
+
+                cust = cust.Trim();
+                prod = prod.Trim();
+
+                string key = string.Join("|", cust.ToUpperInvariant(), prod.ToUpperInvariant());
 
                 if (!groups.TryGetValue(key, out var totals))
                 {
@@ -129,15 +135,28 @@ namespace Reconciliation
                     groups[key] = totals;
                 }
 
-                totals.Quantity += SafeDecimal(row, "Quantity");
-                totals.Subtotal += SafeDecimal(row, "PartnerSubTotal", "Subtotal");
-                totals.Total += SafeDecimal(row, "PartnerTotal", "Total");
-                totals.UnitPrice += SafeDecimal(row, "PartnerUnitPrice", "UnitPrice");
-                totals.TaxTotal += SafeDecimal(row, "PartnerTaxTotal", "TaxTotal");
-                index++;
+                if (string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod))
+                    totals.HasError = true;
+
+                if (microsoft)
+                {
+                    totals.Quantity += SafeDecimal(row, "Quantity");
+                    totals.Subtotal += SafeDecimal(row, "Subtotal");
+                    totals.Total += SafeDecimal(row, "Total");
+                    totals.UnitPrice += SafeDecimal(row, "UnitPrice");
+                    totals.TaxTotal += SafeDecimal(row, "TaxTotal");
+                }
+                else
+                {
+                    totals.Quantity += SafeDecimal(row, "Quantity");
+                    totals.Subtotal += SafeDecimal(row, "PartnerSubTotal");
+                    totals.Total += SafeDecimal(row, "PartnerTotal");
+                    totals.UnitPrice += SafeDecimal(row, "PartnerUnitPrice");
+                    totals.TaxTotal += SafeDecimal(row, "PartnerTaxTotal");
+                }
             }
 
-            return (groups, errors);
+            return groups;
         }
 
         private static bool TotalsEqual(GroupTotals hub, GroupTotals ms)
@@ -162,50 +181,6 @@ namespace Reconciliation
             return 0m;
         }
 
-        /// <summary>
-        /// Key used only for grouping. It deliberately excludes ChargeType,
-        /// ChargeStartDate and SubscriptionId/Guid because those values often
-        /// change between systems and would otherwise block legitimate matches.
-        /// </summary>
-        private static bool TryBuildGroupKey(DataRow row, out string key, out string cust, out string prod)
-        {
-            string Customer()
-            {
-                if (row.Table.Columns.Contains("CustomerDomainName"))
-                {
-                    string v = Convert.ToString(row["CustomerDomainName"]) ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(v)) return v;
-                }
-                if (row.Table.Columns.Contains("CustomerName"))
-                    return Convert.ToString(row["CustomerName"]) ?? string.Empty;
-                return string.Empty;
-            }
-
-            string Product()
-            {
-                if (row.Table.Columns.Contains("ProductId"))
-                {
-                    string v = Convert.ToString(row["ProductId"]) ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(v)) return v;
-                }
-                if (row.Table.Columns.Contains("PartNumber"))
-                    return Convert.ToString(row["PartNumber"]) ?? string.Empty;
-                return string.Empty;
-            }
-
-            cust = Customer().Trim();
-            prod = Product().Trim();
-
-            if (string.IsNullOrWhiteSpace(cust) || string.IsNullOrWhiteSpace(prod))
-            {
-                key = string.Empty;
-                return false;
-            }
-
-            key = string.Join("|", cust.ToUpperInvariant(), prod.ToUpperInvariant());
-            return true;
-        }
-
         #endregion
 
         #region Result‑table helpers
@@ -228,22 +203,41 @@ namespace Reconciliation
             return t;
         }
 
-        private static void AddSimpleRow(DataTable table, string key, string status)
+        private static void AddMissingRow(DataTable table, GroupTotals ours)
         {
             var r = table.NewRow();
-            var parts = key.Split('|');
-            r["CustomerDomainName"] = parts.Length > 0 ? parts[0] : string.Empty;
-            r["ProductId"] = parts.Length > 1 ? parts[1] : string.Empty;
-            r["Status"] = status;
+            r["CustomerDomainName"] = ours.CustomerDomain;
+            r["ProductId"] = ours.ProductId;
+            r["Status"] = "Missing in Microsoft";
+            r["HubQuantity"] = ours.Quantity;
+            r["MSQuantity"] = 0m;
+            r["HubSubtotal"] = ours.Subtotal;
+            r["MSSubtotal"] = 0m;
+            r["HubTotal"] = ours.Total;
+            r["MSTotal"] = 0m;
+            r["HubUnitPrice"] = ours.UnitPrice;
+            r["MSUnitPrice"] = 0m;
+            r["HubTaxTotal"] = ours.TaxTotal;
+            r["MSTaxTotal"] = 0m;
             table.Rows.Add(r);
         }
 
-        private static void AddDataErrorRow(DataTable table, InvalidRow err)
+        private static void AddDataErrorRow(DataTable table, GroupTotals ours)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = err.CustomerDomain;
-            r["ProductId"] = err.ProductId;
+            r["CustomerDomainName"] = ours.CustomerDomain;
+            r["ProductId"] = ours.ProductId;
             r["Status"] = "Data Error";
+            r["HubQuantity"] = ours.Quantity;
+            r["MSQuantity"] = 0m;
+            r["HubSubtotal"] = ours.Subtotal;
+            r["MSSubtotal"] = 0m;
+            r["HubTotal"] = ours.Total;
+            r["MSTotal"] = 0m;
+            r["HubUnitPrice"] = ours.UnitPrice;
+            r["MSUnitPrice"] = 0m;
+            r["HubTaxTotal"] = ours.TaxTotal;
+            r["MSTaxTotal"] = 0m;
             table.Rows.Add(r);
         }
 
