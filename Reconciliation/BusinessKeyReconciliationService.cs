@@ -14,13 +14,12 @@ namespace Reconciliation
     /// </summary>
     public class BusinessKeyReconciliationService
     {
-        private static readonly (string Hub,string Ms)[] FinancialColumns =
+        private static readonly (string Hub, string Ms)[] FinancialColumns =
         {
+            ("Quantity",         "Quantity"),
             ("PartnerUnitPrice", "UnitPrice"),
-            ("Quantity", "Quantity"),
-            ("PartnerSubTotal", "Subtotal"),
-            ("PartnerTaxTotal", "TaxTotal"),
-            ("PartnerTotal", "Total")
+            ("PartnerSubTotal",  "Subtotal"),
+            ("PartnerTotal",     "Total")
         };
 
         public string LastSummary { get; private set; } = string.Empty;
@@ -28,127 +27,58 @@ namespace Reconciliation
         // ------------------------------------------------------------------
         //  Public entry point
         // ------------------------------------------------------------------
-        public DataTable Reconcile(DataTable ours, DataTable microsoft)
+        public DataTable Reconcile(DataTable msphub, DataTable microsoft)
         {
-            if (ours == null) throw new ArgumentNullException(nameof(ours));
+            if (msphub == null) throw new ArgumentNullException(nameof(msphub));
             if (microsoft == null) throw new ArgumentNullException(nameof(microsoft));
 
-            //---------------------------------------------------------------
-            // 1. Tenant filter: keep only MS rows for our PartnerId
-            //---------------------------------------------------------------
-            string partnerId = string.Empty;
-            if (ours.Columns.Contains("PartnerId"))
-            {
-                partnerId = ours.AsEnumerable()
-                                .Select(r => Convert.ToString(r["PartnerId"]) ?? string.Empty)
-                                .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
-            }
-
-            if (!string.IsNullOrEmpty(partnerId) && microsoft.Columns.Contains("PartnerId"))
-            {
-                var msRows = microsoft.AsEnumerable()
-                    .Where(r => string.Equals(Convert.ToString(r["PartnerId"]),
-                                              partnerId,
-                                              StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
-
-                microsoft = msRows.Length > 0 ? msRows.CopyToDataTable()
-                                              : microsoft.Clone();
-            }
-
-            //---------------------------------------------------------------
-            // 2. Pre‑process both tables (normalises dates, numbers, etc.)
-            //---------------------------------------------------------------
-            CsvPreProcessor.Process(ours);
+            CsvPreProcessor.Process(msphub);
             CsvPreProcessor.Process(microsoft);
 
-            //---------------------------------------------------------------
-            // 3. Filter Microsoft rows by the tenant domains we have
-            //---------------------------------------------------------------
-            var tenantSet = ours.AsEnumerable()
-                                .Select(r => r["CustomerDomainName"]?.ToString()?.Trim()
-                                              ?.ToUpperInvariant())
-                                .Where(s => !string.IsNullOrEmpty(s))
-                                .ToHashSet();
-
-            if (microsoft.Rows.Count > 0 && microsoft.Columns.Contains("CustomerDomainName"))
-            {
-                var msRows = microsoft.AsEnumerable()
-                    .Where(r => tenantSet.Contains(r["CustomerDomainName"]
-                                                   ?.ToString()
-                                                   ?.Trim()
-                                                   ?.ToUpperInvariant()))
-                    .ToArray();
-
-                microsoft = msRows.Length > 0 ? msRows.CopyToDataTable()
-                                              : microsoft.Clone();
-            }
-
-            //---------------------------------------------------------------
-            // 4. Group the two tables by the *reduced* business key
-            //---------------------------------------------------------------
-            var oursGroups = BuildGroups(ours);
+            var hubGroups = BuildGroups(msphub);
             var msGroups = BuildGroups(microsoft);
 
-            //---------------------------------------------------------------
-            // 5. Determine which financial columns both tables share
-            //---------------------------------------------------------------
-            var sharedFields = FinancialColumns
-                               .Where(p => ours.Columns.Contains(p.Hub) &&
-                                           microsoft.Columns.Contains(p.Ms))
-                               .ToArray();
-
-            if (sharedFields.Length == 0)
-                SimpleLogger.Info("No shared finance columns – row‑presence only.");
-
-            //---------------------------------------------------------------
-            // 6. Core reconciliation loop
-            //---------------------------------------------------------------
             var result = BuildResultTable();
-            int missingInMicrosoft = 0, mismatches = 0, perfect = 0;
+            int matched = 0, missing = 0, mismatched = 0;
 
-            // Iterate only over MSPHub rows; Microsoft-only rows are ignored.
-            foreach (var key in oursGroups.Keys)
+            var sharedFields = FinancialColumns
+                .Where(p => msphub.Columns.Contains(p.Hub) && microsoft.Columns.Contains(p.Ms))
+                .ToArray();
+
+            foreach (var key in hubGroups.Keys)
             {
-                var ourRows = oursGroups[key];
-                msGroups.TryGetValue(key, out var msRowsList);
-
-                // -------- Only in MSP‑Hub ----------------------------------
-                if (msRowsList == null)
+                var ours = hubGroups[key];
+                if (!msGroups.TryGetValue(key, out var theirs))
                 {
-                    foreach (var row in ourRows)
-                    {
-                        AddMissingRow(result, BuildFullKey(row), "Missing in Microsoft");
-                        missingInMicrosoft++;
-                    }
+                    AddSimpleRow(result, key, "Missing in Microsoft");
+                    missing++;
                     continue;
                 }
 
-                // -------- Matched key – aggregate financials ----------------
-                bool rowMismatch = false;
+                bool allEqual = true;
                 foreach (var field in sharedFields)
                 {
-                    decimal oursTotal = ourRows.Sum(r => ValueParser.SafeDecimal(r[field.Hub]));
-                    decimal msTotal = msRowsList.Sum(r => ValueParser.SafeDecimal(r[field.Ms]));
-
-                    if (Math.Abs(oursTotal - msTotal) <= AppConfig.Validation.NumericTolerance)
-                        continue;
-
-                    AddMismatchRow(result, BuildFullKey(ourRows[0]), field.Ms,
-                                   oursTotal.ToString(CultureInfo.InvariantCulture),
-                                   msTotal.ToString(CultureInfo.InvariantCulture));
-                    mismatches++;
-                    rowMismatch = true;
+                    decimal oursTotal = ours.Sum(r => ValueParser.SafeDecimal(r[field.Hub]));
+                    decimal msTotal = theirs.Sum(r => ValueParser.SafeDecimal(r[field.Ms]));
+                    if (Math.Abs(oursTotal - msTotal) > AppConfig.Validation.NumericTolerance)
+                    {
+                        allEqual = false;
+                        break;
+                    }
                 }
 
-                if (!rowMismatch) perfect++;
+                if (allEqual)
+                {
+                    matched++;
+                }
+                else
+                {
+                    AddSimpleRow(result, key, "Mismatched");
+                    mismatched++;
+                }
             }
 
-            //---------------------------------------------------------------
-            // 7. Summary & return
-            //---------------------------------------------------------------
-            LastSummary = $"Perfect:{perfect} | Missing-MS:{missingInMicrosoft} | Diff:{mismatches}";
-            SimpleLogger.Info($"Tenant {partnerId}: {LastSummary}");
+            LastSummary = $"Matched: {matched} | Missing in Microsoft: {missing} | Mismatched: {mismatched}";
             return result;
         }
 
@@ -223,104 +153,25 @@ namespace Reconciliation
             return true;
         }
 
-        /// <summary>
-        /// Key that is shown in the result grid.  We keep all the original
-        /// fields here for context, even though they do not participate in
-        /// the group key.
-        /// </summary>
-        private static string BuildFullKey(DataRow row)
-        {
-            string V(string col) => row.Table.Columns.Contains(col)
-                ? (row[col]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
-                : string.Empty;
-
-            string sub = V("SubscriptionId");
-            if (string.IsNullOrEmpty(sub) && row.Table.Columns.Contains("SubscriptionGuid"))
-                sub = V("SubscriptionGuid");
-
-            string date = V("ChargeStartDate");
-
-            return string.Join("|",
-                V("CustomerDomainName"),
-                V("ProductId"),
-                V("ChargeType"),
-                date,
-                sub);
-        }
-        #endregion
-
-        #region Row‑level utilities
-
-        private static bool ValuesEqual(string a, string b)
-        {
-            a = a.Trim();
-            b = b.Trim();
-
-            if (decimal.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out var da) &&
-                decimal.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out var db))
-            {
-                return Math.Abs(da - db) <= AppConfig.Validation.NumericTolerance;
-            }
-            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-        }
         #endregion
 
         #region Result‑table helpers
         private static DataTable BuildResultTable()
         {
             var t = new DataTable();
-            foreach (var c in new[]
-                     { "CustomerDomainName", "ProductId", "ChargeType",
-                       "ChargeStartDate",   "SubscriptionId" })
-                t.Columns.Add(c);
-
-            t.Columns.Add("Field Name");
-            t.Columns.Add("Our Value");
-            t.Columns.Add("Microsoft Value");
-            t.Columns.Add("Explanation");
-            t.Columns.Add("Suggested Action");
-            t.Columns.Add("Reason");
+            t.Columns.Add("CustomerDomainName");
+            t.Columns.Add("ProductId");
+            t.Columns.Add("Status");
             return t;
         }
 
-        private static void AddMissingRow(DataTable table,
-                                          string key,
-                                          string message)
+        private static void AddSimpleRow(DataTable table, string key, string status)
         {
             var r = table.NewRow();
             var parts = key.Split('|');
-            for (int i = 0; i < 5; i++)
-                r[i] = i < parts.Length ? parts[i] : string.Empty;
-
-            r["Field Name"] = "Row";
-            r["Our Value"] = string.Empty;
-            r["Microsoft Value"] = string.Empty;
-            r["Explanation"] = message;
-            r["Suggested Action"] = string.Empty;
-            r["Reason"] = "Row missing in " +
-                                    (message.Contains("Microsoft")
-                                         ? "Microsoft invoice"
-                                         : "MSP‑Hub invoice");
-            table.Rows.Add(r);
-        }
-
-        private static void AddMismatchRow(DataTable table,
-                                           string key,
-                                           string field,
-                                           string ourVal,
-                                           string msVal)
-        {
-            var r = table.NewRow();
-            var parts = key.Split('|');
-            for (int i = 0; i < 5; i++)
-                r[i] = i < parts.Length ? parts[i] : string.Empty;
-
-            r["Field Name"] = FriendlyNameMap.Get(field);
-            r["Our Value"] = ourVal;
-            r["Microsoft Value"] = msVal;
-            r["Explanation"] = $"Mismatch in {field}: {ourVal} vs {msVal}";
-            r["Suggested Action"] = string.Empty;
-            r["Reason"] = "Amount mismatch";
+            r["CustomerDomainName"] = parts.Length > 0 ? parts[0] : string.Empty;
+            r["ProductId"] = parts.Length > 1 ? parts[1] : string.Empty;
+            r["Status"] = status;
             table.Rows.Add(r);
         }
         #endregion
