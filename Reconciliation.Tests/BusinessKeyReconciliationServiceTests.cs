@@ -117,7 +117,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class BusinessKeyReconciliationServiceTests
         var diff = svc.Reconcile(ours, ms);
 
         Assert.Empty(diff.Rows);
-        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
     }
 
     [Fact]
@@ -167,7 +167,24 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Empty(result.Rows);
-        Assert.Equal("Perfect:1 | Only-MSP:0 | Only-MS:0 | Diff:0", svc.LastSummary);
+        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
+    }
+
+    [Fact]
+    public void Reconcile_IgnoresRowsOnlyInMicrosoft()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","1","1","10","1");
+
+        var ms = CreateTable(true);
+        ms.Rows.Add("cust.com","P1","1","1","10","1");
+        ms.Rows.Add("cust.com","P2","1","1","10","1"); // extra row only in MS
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Empty(result.Rows);
+        Assert.Equal("Perfect:1 | Missing-MS:0 | Diff:0", svc.LastSummary);
     }
 }
 
