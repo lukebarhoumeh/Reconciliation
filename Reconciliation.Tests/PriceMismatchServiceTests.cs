@@ -1,6 +1,7 @@
 using System.Data;
 using System.IO;
 using OfficeOpenXml;
+using Reconciliation;
 
 namespace Reconciliation.Tests
 {
@@ -15,16 +16,17 @@ namespace Reconciliation.Tests
             hub.Columns.Add("ProductId");
             hub.Columns.Add("SkuId");
             hub.Columns.Add("ChargeType");
+            hub.Columns.Add("ChargeStartDate");
             hub.Columns.Add("Term");
             hub.Columns.Add("BillingCycle");
             hub.Columns.Add("EffectiveUnitPrice", typeof(decimal));
             hub.Columns.Add("Quantity", typeof(decimal));
             hub.Columns.Add("ProductName");
-            hub.Rows.Add("a.com","p1","1","Usage","T","M",1m,1m,"X");
+            hub.Rows.Add("a.com","p1","1","Usage","2025-01-01","T","M",1m,1m,"X");
 
             var ms = hub.Clone();
             ms.Columns.Add("SubscriptionDescription");
-            ms.Rows.Add("a.com","p1","1","Usage","T","M",1m,1m,"X","X");
+            ms.Rows.Add("a.com","p1","1","Usage","2025-01-01","T","M",1m,1m,"X","X");
             var result = svc.GetPriceMismatches(hub, ms);
             Assert.Empty(result.Rows);
         }
@@ -53,19 +55,20 @@ namespace Reconciliation.Tests
             hub.Columns.Add("ProductId");
             hub.Columns.Add("SkuId");
             hub.Columns.Add("ChargeType");
+            hub.Columns.Add("ChargeStartDate");
             hub.Columns.Add("Term");
             hub.Columns.Add("BillingCycle");
             hub.Columns.Add("EffectiveUnitPrice", typeof(decimal));
             hub.Columns.Add("Quantity", typeof(decimal));
             hub.Columns.Add("ProductName");
             // Hub records only the net additional license
-            hub.Rows.Add("a.com", "p1", "1", "Usage", "T", "M", 1m, 1m, "X");
+            hub.Rows.Add("a.com", "p1", "1", "Usage", "2025-01-01", "T", "M", 1m, 1m, "X");
 
             var ms = hub.Clone();
             ms.Columns.Add("SubscriptionDescription");
             // Microsoft invoice credits original charge then debits new amount
-            ms.Rows.Add("a.com", "p1", "1", "Credit", "T", "M", 1m, -100m, "X", "X");
-            ms.Rows.Add("a.com", "p1", "1", "Usage", "T", "M", 1m, 101m, "X", "X");
+            ms.Rows.Add("a.com", "p1", "1", "Credit", "2025-01-01", "T", "M", 1m, -100m, "X", "X");
+            ms.Rows.Add("a.com", "p1", "1", "Usage", "2025-01-01", "T", "M", 1m, 101m, "X", "X");
 
             var result = svc.GetPriceMismatches(hub, ms);
             Assert.Empty(result.Rows);
