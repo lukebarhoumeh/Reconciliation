@@ -92,11 +92,29 @@ public static class CsvSchemaMapper
             {
                 dest[canonical] = ResolveValue(map, canonical, src, dest);
             }
+
+            string customer = dest["CustomerDomainName"]?.ToString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(customer))
+                customer = src.Table.Columns.Contains("CustomerName") ? src["CustomerName"]?.ToString() ?? string.Empty : string.Empty;
+
+            string product = dest["ProductId"]?.ToString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(product))
+                product = src.Table.Columns.Contains("PartNumber") ? src["PartNumber"]?.ToString() ?? string.Empty : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(customer) || string.IsNullOrWhiteSpace(product))
+            {
+                SimpleLogger.Warn("Row skipped: missing CustomerDomainName or ProductId");
+                continue;
+            }
+
+            dest["CustomerDomainName"] = customer;
+            dest["ProductId"] = product;
+
             table.Rows.Add(dest);
         }
 
-        // Optional post‑normalisation (e.g. trim, upper‑case, etc.)
-        DataNormaliser.Normalise(table, AppConfig.Reconciliation.CompositeKeys);
+        var keyCols = new[] { "CustomerDomainName", "ProductId" }.Concat(AppConfig.Reconciliation.CompositeKeys);
+        DataNormaliser.Normalise(table, keyCols);
         return table;
     }
 
