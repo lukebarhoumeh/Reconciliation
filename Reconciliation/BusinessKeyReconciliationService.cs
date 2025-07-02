@@ -136,8 +136,8 @@ namespace Reconciliation
                 bool rowMismatch = false;
                 foreach (var field in sharedFields)
                 {
-                    decimal oursTotal = ourRows.Sum(r => SafeDecimal(r[field]));
-                    decimal msTotal = msRowsList.Sum(r => SafeDecimal(r[field]));
+                    decimal oursTotal = ourRows.Sum(r => ValueParser.SafeDecimal(r[field]));
+                    decimal msTotal = msRowsList.Sum(r => ValueParser.SafeDecimal(r[field]));
 
                     if (Math.Abs(oursTotal - msTotal) <= AppConfig.Validation.NumericTolerance)
                         continue;

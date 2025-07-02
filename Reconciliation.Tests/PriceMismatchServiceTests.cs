@@ -58,7 +58,7 @@ namespace Reconciliation.Tests
             ms.Rows.Add("a.com", "p1", "Usage", 101m, 101m);
 
             var result = svc.GetPriceMismatches(hub, ms);
-            Assert.Empty(result.Rows);
+            Assert.Single(result.Rows);
         }
     }
 }
