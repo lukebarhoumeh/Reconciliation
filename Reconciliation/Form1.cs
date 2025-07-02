@@ -35,6 +35,7 @@ namespace Reconciliation
         private readonly ToolTip _toolTip = new();
         private readonly FormsTimer _flashTimer = new();
         private string _lastSummary = string.Empty;
+        private readonly AdvancedReconciliationService _reconService = new();
 
         #region Form_UX
 
@@ -344,11 +345,11 @@ namespace Reconciliation
                 // Run the CPU-bound operations asynchronously
                 if (rbExternal.Checked == true)
                 {
-                    var svc = new BusinessKeyReconciliationService();
-                    _resultData = await Task.Run(() =>
-                        svc.Reconcile(_sixDotOneDataView.Table, _microsoftDataView.Table)
-                            .DefaultView);
-                    _lastSummary = svc.LastSummary;
+                    var result = await Task.Run(() =>
+                        _reconService.Reconcile(_sixDotOneDataView.Table, _microsoftDataView.Table));
+                    _resultData = result.RowDiscrepancies.DefaultView;
+                    _pricematchDataView = result.PriceMismatches.DefaultView;
+                    _lastSummary = result.Summary;
                     var firstTenantDomain = _sixDotOneDataView.Table.Rows.Count > 0
                         ? _sixDotOneDataView.Table.Rows[0]["CustomerDomainName"]?.ToString() ?? string.Empty
                         : string.Empty;
@@ -356,10 +357,15 @@ namespace Reconciliation
 
                     Invoke(new Action(() =>
                     {
-                        // Bind directly to the DataView so RowFilter updates reflect immediately
                         BindingSource bindingSource = new BindingSource { DataSource = _resultData };
                         dgResultdata.DataSource = bindingSource;
                         AutoFitColumns(dgResultdata);
+                        dgResultdata.Visible = _resultData.Count > 0;
+
+                        dgAzurePriceMismatch.DataSource = _pricematchDataView;
+                        dgAzurePriceMismatch.Visible = _pricematchDataView.Count > 0;
+                        btnPriceMismatchingExportToCsv.Enabled = _pricematchDataView.Count > 0;
+                        lblPricematchingEmptyMessage.Visible = _pricematchDataView.Count == 0;
 
                         lblMismatchSummary.Text = _lastSummary;
                         lblMismatchSummary.Visible = true;
@@ -386,7 +392,7 @@ namespace Reconciliation
                         {
                             lblEmptyMessage.Visible = false;
                         }
-                        dgResultdata.Visible = true;
+                        dgResultdata.Visible = _resultData.Count > 0;
                     }));
                 }
                 else

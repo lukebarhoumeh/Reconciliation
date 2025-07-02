@@ -178,8 +178,8 @@ namespace Reconciliation
             //---------------------------------------------------------------
             // 7. Summary & return
             //---------------------------------------------------------------
-            LastSummary = $"Perfect:{perfect} | Only‑MSP:{onlyOur} | " +
-                          $"Only‑MS:{onlyMs} | Diff:{mismatches}";
+            LastSummary = $"Perfect:{perfect} | Only-MSP:{onlyOur} | " +
+                          $"Only-MS:{onlyMs} | Diff:{mismatches}";
             SimpleLogger.Info($"Tenant {partnerId}: {LastSummary}");
             return result;
         }
