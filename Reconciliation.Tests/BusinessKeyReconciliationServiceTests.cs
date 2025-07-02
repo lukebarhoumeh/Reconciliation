@@ -8,7 +8,7 @@ public class BusinessKeyReconciliationServiceTests
     private static DataTable CreateTable(bool microsoft = false)
     {
         string[] cols = microsoft
-            ? new[] { "DomainUrl", "ProductGuid", "UnitPrice", "Subtotal", "Total", "Quantity" }
+            ? new[] { "CustomerDomainName", "ProductId", "UnitPrice", "Subtotal", "Total", "Quantity" }
             : new[] { "CustomerDomainName", "ProductId", "PartnerUnitPrice", "PartnerSubTotal", "PartnerTotal", "Quantity" };
         var dt = new DataTable();
         foreach (var c in cols) dt.Columns.Add(c);
@@ -76,8 +76,8 @@ public class BusinessKeyReconciliationServiceTests
     public void Reconcile_IgnoresChargeStartDate()
     {
         var ours = Table(("CustomerDomainName","cust.com"), ("ProductId","P1"),
-                         ("ChargeStartDate","2024-01-01"), ("Total","10"));
-        var ms   = Table(("DomainUrl","cust.com"), ("ProductGuid","P1"),
+                         ("ChargeStartDate","2024-01-01"), ("PartnerTotal","10"));
+        var ms   = Table(("CustomerDomainName","cust.com"), ("ProductId","P1"),
                          ("ChargeStartDate","2024-02-02"), ("Total","10"));
 
         var svc = new BusinessKeyReconciliationService();
@@ -110,7 +110,7 @@ public class BusinessKeyReconciliationServiceTests
         ours.Rows.Add("cust.com","P1","1","1","10","1","T1");
 
         var ms = new DataTable();
-        foreach (var c in new[]{"DomainUrl","ProductGuid","UnitPrice","Subtotal","Total","Quantity","PartnerId"})
+        foreach (var c in new[]{"CustomerDomainName","ProductId","UnitPrice","Subtotal","Total","Quantity","PartnerId"})
             ms.Columns.Add(c);
         ms.Rows.Add("cust.com","P1","1","1","10","1","T1");
         ms.Rows.Add("cust.com","P1","1","1","10","1","T2");
@@ -126,11 +126,9 @@ public class BusinessKeyReconciliationServiceTests
     [Fact]
     public void AliasAndFallback_MatchesRows()
     {
-        var ours = Table(("SubId","123"), ("ProductId","P1"),
-                         ("CustomerDomainName","foo.com"), ("UnitPrice","10"));
+        var ours = Table(("CustomerDomainName","foo.com"), ("ProductId","P1"), ("PartnerUnitPrice","10"));
 
-        var ms   = Table(("SubscriptionGuid","123"), ("ProductId","P1"),
-                         ("CustomerDomainName","foo.com"), ("PartnerUnitPrice","10"));
+        var ms   = Table(("CustomerDomainName","foo.com"), ("ProductId","P1"), ("UnitPrice","10"));
 
         var svc = new BusinessKeyReconciliationService();
         var diff = svc.Reconcile(ours, ms);
