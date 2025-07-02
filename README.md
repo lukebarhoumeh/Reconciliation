@@ -43,8 +43,7 @@ are normalised automatically and the summary logs now show kid-friendly
 counts of perfect matches, missing rows and mismatches.
 
 ```csharp
-var svc = new BusinessKeyReconciliationService(
-    new[]{"CustomerDomainName","ProductId","ChargeType","ChargeStartDate","SubscriptionId"});
+var svc = new BusinessKeyReconciliationService();
 var result = svc.Reconcile(msphub, microsoft);
 ```
 

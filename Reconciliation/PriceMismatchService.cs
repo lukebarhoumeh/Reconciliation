@@ -20,10 +20,7 @@ namespace Reconciliation
         private static readonly string[] KeyColumns =
         {
             "CustomerDomainName",
-            "ProductId",
-            "ChargeStartDate",   // prevents cross‑period aggregation
-            "Term",
-            "BillingCycle"
+            "ProductId"
         };
 
         private const string AzurePlan = "Azure plan";
@@ -86,8 +83,12 @@ namespace Reconciliation
                 for (int i = 0; i < KeyColumns.Length; i++)
                     row[KeyColumns[i]] = parts[i];
 
-                row["ChargeType"] = string.Join(", ",
-                                        hGroup.Select(r => r["ChargeType"]).Distinct());
+                if (result.Columns.Contains("ChargeType"))
+                {
+                    row["ChargeType"] = string.Join(", ",
+                        hGroup.Where(r => r.Table.Columns.Contains("ChargeType"))
+                               .Select(r => r["ChargeType"]).Distinct());
+                }
                 row["HubQuantity"] = hubQty;
                 row["MSQuantity"] = msQty;
                 row["HubSubtotal"] = hubSub;
@@ -149,9 +150,9 @@ namespace Reconciliation
                           StringComparison.OrdinalIgnoreCase);
 
         private static string MakeKey(DataRow r) =>
-            string.Join("|", KeyColumns.Select(c => (r[c]?.ToString() ?? string.Empty)
-                                                   .Trim()
-                                                   .ToUpperInvariant()));
+            string.Join("|", KeyColumns.Select(c => r.Table.Columns.Contains(c)
+                                                   ? (r[c]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
+                                                   : string.Empty));
 
         private static decimal SafeDecimal(object? v) =>
             decimal.TryParse(Convert.ToString(v), NumberStyles.Any,

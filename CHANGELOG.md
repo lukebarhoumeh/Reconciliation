@@ -8,6 +8,7 @@
 - Missing-row detection no longer exits early and tenant filtering ignores case.
 - Pinned SDK version to `8.0.117` for Linux CI compatibility.
 - Reconciliation builds as a WinForms executable (`Reconciliation.exe`).
+- Row matching now uses only `CustomerDomainName` and `ProductId` so missing columns no longer skip rows.
 - Added advanced reconciliation service with composite key grouping and mapping
   via `column-map.json`.
 - Added `BusinessKeyReconciliationService` for strict business-key matching and
