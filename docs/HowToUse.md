@@ -11,6 +11,7 @@
    - A summary appears above the grid after a successful run.
    - Use **Filter Field** or **Filter Explanation** to narrow down discrepancies.
    - Tick **High Priority Only** to hide low severity validation errors.
+   - Each CustomerDomainName/ProductId pair appears once with status `Matched`, `Missing in Microsoft`, `Mismatched` or `Data Error`.
 4. **Export**
    - Choose **Export** to save the discrepancy or validation results.
    - Logs can be exported from the **Logs** tab.

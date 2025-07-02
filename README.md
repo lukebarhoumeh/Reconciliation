@@ -44,6 +44,8 @@ are normalised automatically and the summary logs now show counts of
 matched pairs, rows missing in Microsoft and mismatched totals. Rows that
 appear only in the Microsoft invoice are ignored so the tool works for any
 MSPHub partner.
+Every unique key is listed once in the results grid with status `Matched`,
+`Missing in Microsoft`, `Mismatched` or `Data Error`.
 
 ```csharp
 var svc = new BusinessKeyReconciliationService();
