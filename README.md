@@ -38,11 +38,12 @@ the detector instance.
 
 `ReconciliationService` encapsulates the external invoice matching logic so it
 can be unit tested without the WinForms UI.
-`BusinessKeyReconciliationService` provides stricter business-key matching and
+`BusinessKeyReconciliationService` provides strict business-key matching and
 financial comparison. Column aliases like `DomainUrl` or `SubscriptionGuid`
-are normalised automatically and the summary logs now show kid-friendly
-counts of perfect matches, missing rows and mismatches. Rows that appear only
-in the Microsoft invoice are ignored so the tool works for any MSPHub partner.
+are normalised automatically and the summary logs now show counts of
+matched pairs, rows missing in Microsoft and mismatched totals. Rows that
+appear only in the Microsoft invoice are ignored so the tool works for any
+MSPHub partner.
 
 ```csharp
 var svc = new BusinessKeyReconciliationService();
