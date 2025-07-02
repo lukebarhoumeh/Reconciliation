@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Business-key reconciliation now reports "Matched", "Missing in Microsoft" and "Mismatched" counts.
+- Aggregated comparison ensures every MSPHub (CustomerDomainName, ProductId) pair appears once and logs "Data Error" rows for blank keys.
 - Tenant slice and alias fixes ensure Microsoft rows are filtered to the MSP tenant and SubscriptionGUID is recognised.
 - Updated tests to target only `net8.0` and fixed build on non-Windows hosts.
 - Removed leftover `RowPrePaint` event wiring in `Form1`.
