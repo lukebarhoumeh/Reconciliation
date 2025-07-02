@@ -163,7 +163,8 @@ namespace Reconciliation
             if (string.IsNullOrWhiteSpace(product) && r.Table.Columns.Contains("PartNumber"))
                 product = Convert.ToString(r["PartNumber"]) ?? string.Empty;
 
-            return string.Join("|", customer.Trim().ToUpperInvariant(), product.Trim().ToUpperInvariant());
+            return (customer?.Trim().ToUpperInvariant() ?? string.Empty) + "|" +
+                   (product?.Trim().ToUpperInvariant() ?? string.Empty);
         }
 
         private static decimal SafeDecimal(object? v) =>

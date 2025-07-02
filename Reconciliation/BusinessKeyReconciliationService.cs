@@ -73,18 +73,22 @@ namespace Reconciliation
             foreach (var err in hubErrors)
                 AddDataErrorRow(result, err);
 
+            SimpleLogger.Info($"Aggregated MSPHub keys: {hubGroups.Count}; MS keys: {msGroups.Count}");
+
             foreach (var key in hubGroups.Keys)
             {
                 var ours = hubGroups[key];
                 if (!msGroups.TryGetValue(key, out var theirs))
                 {
                     AddSimpleRow(result, key, "Missing in Microsoft");
+                    SimpleLogger.Warn($"Key {key} missing in Microsoft results");
                     missing++;
                     continue;
                 }
 
                 if (TotalsEqual(ours, theirs))
                 {
+                    AddMatchRow(result, ours, theirs);
                     matched++;
                 }
                 else
@@ -249,6 +253,25 @@ namespace Reconciliation
             r["CustomerDomainName"] = hub.CustomerDomain;
             r["ProductId"] = hub.ProductId;
             r["Status"] = "Mismatched";
+            r["HubQuantity"] = hub.Quantity;
+            r["MSQuantity"] = ms.Quantity;
+            r["HubSubtotal"] = hub.Subtotal;
+            r["MSSubtotal"] = ms.Subtotal;
+            r["HubTotal"] = hub.Total;
+            r["MSTotal"] = ms.Total;
+            r["HubUnitPrice"] = hub.UnitPrice;
+            r["MSUnitPrice"] = ms.UnitPrice;
+            r["HubTaxTotal"] = hub.TaxTotal;
+            r["MSTaxTotal"] = ms.TaxTotal;
+            table.Rows.Add(r);
+        }
+
+        private static void AddMatchRow(DataTable table, GroupTotals hub, GroupTotals ms)
+        {
+            var r = table.NewRow();
+            r["CustomerDomainName"] = hub.CustomerDomain;
+            r["ProductId"] = hub.ProductId;
+            r["Status"] = "Matched";
             r["HubQuantity"] = hub.Quantity;
             r["MSQuantity"] = ms.Quantity;
             r["HubSubtotal"] = hub.Subtotal;
