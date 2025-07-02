@@ -9,7 +9,7 @@ public class BusinessKeyReconciliationServiceTests
     {
         string[] cols = microsoft
             ? new[] { "CustomerDomainName", "ProductId", "UnitPrice", "Subtotal", "Total", "Quantity" }
-            : new[] { "CustomerDomainName", "ProductId", "PartnerUnitPrice", "PartnerSubTotal", "PartnerTotal", "Quantity" };
+            : new[] { "CustomerDomainName", "ProductId", "UnitPrice", "Subtotal", "Total", "Quantity" };
         var dt = new DataTable();
         foreach (var c in cols) dt.Columns.Add(c);
         return dt;
@@ -119,8 +119,8 @@ public class BusinessKeyReconciliationServiceTests
         var result = svc.Reconcile(ours, ms);
 
         Assert.Single(result.Rows);
-        Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
+        Assert.Equal("Mismatched", result.Rows[0]["Status"]);
+        Assert.Equal("Matched: 0 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 1 | Data Errors: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(diff.Rows);
         Assert.Equal("Matched", diff.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(result.Rows);
         Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(result.Rows);
         Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -187,9 +187,10 @@ public class BusinessKeyReconciliationServiceTests
         var svc = new BusinessKeyReconciliationService();
         var result = svc.Reconcile(ours, ms);
 
-        Assert.Single(result.Rows);
-        Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Contains(result.Rows.Cast<DataRow>(), r => r["Status"].ToString() == "Matched");
+        Assert.Contains(result.Rows.Cast<DataRow>(), r => r["Status"].ToString() == "Missing in MSPHub");
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 1 | Mismatched: 0 | Data Errors: 0", svc.LastSummary);
     }
 }
 
