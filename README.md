@@ -29,6 +29,7 @@ After running `dotnet build`, check `bin/Debug` for the generated executable.
 - Money and percent values display with at most two decimals.
 - Data quality warnings highlight when more than 10% of rows contain blank or zero values in critical fields.
 - Discrepancy detector with numeric and date tolerances.
+- `ValueParser.SafeDecimal` ensures decimal aggregation works across services.
 
 ### Discrepancy Detection
 `DiscrepancyDetector` compares two tables and groups any differences. Adjust the

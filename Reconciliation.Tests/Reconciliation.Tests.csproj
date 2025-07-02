@@ -49,6 +49,7 @@
     <Compile Include="../Reconciliation/SimpleLogger.cs" Link="SimpleLogger.cs" />
     <Compile Include="../Reconciliation/ReconciliationResult.cs" Link="ReconciliationResult.cs" />
     <Compile Include="../Reconciliation/InvoiceValidationResult.cs" Link="InvoiceValidationResult.cs" />
+    <Compile Include="../Reconciliation/ValueParser.cs" Link="ValueParser.cs" />
     <None Include="TestData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
