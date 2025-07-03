@@ -175,7 +175,44 @@ namespace Reconciliation
                 }
             }
 
-            LastSummary = $"Matched: {matched} | Missing in Microsoft: {missingMs} | Missing in MSPHub: {missingHub} | Mismatched: {mismatched} | Data Errors: {errors}";
+            var resultKeySet = result.Rows.Cast<DataRow>()
+                .Select(GetKey)
+                .Where(k => !string.IsNullOrEmpty(k))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var reportedKeys = hubKeys.Where(k => resultKeySet.Contains(k))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var skippedKeys = hubKeys.Except(reportedKeys, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var key in skippedKeys)
+            {
+                SimpleLogger.Warn($"Key skipped or filtered: {key}");
+                if (hubGroups.TryGetValue(key, out var totals))
+                {
+                    AddDataErrorRow(result, totals);
+                }
+                else
+                {
+                    var parts = key.Split('|');
+                    var blank = new GroupTotals
+                    {
+                        CustomerDomain = parts.ElementAtOrDefault(0) ?? string.Empty,
+                        ProductId = parts.ElementAtOrDefault(1) ?? string.Empty
+                    };
+                    AddDataErrorRow(result, blank);
+                }
+                errors++;
+            }
+
+            int totalUnique = hubKeys.Count;
+            int reported = reportedKeys.Count;
+            int skipped = skippedKeys.Count;
+
+            LastSummary =
+                $"Matched: {matched} | Missing in Microsoft: {missingMs} | Missing in MSPHub: {missingHub} | Mismatched: {mismatched} | Data Errors: {errors} | " +
+                $"Total unique MSPHub keys: {totalUnique}; Reported: {reported}; Skipped: {skipped}";
             try
             {
                 string logPath = Path.Combine(Directory.GetCurrentDirectory(),

@@ -46,6 +46,8 @@ appear only in the Microsoft invoice are ignored so the tool works for any
 MSPHub partner.
 Every unique key is listed once in the results grid with status `Matched`,
 `Missing in Microsoft`, `Mismatched` or `Data Error`.
+The summary line now includes the total number of unique MSPHub keys alongside
+how many were reported and how many were skipped due to filtering or errors.
 
 ```csharp
 var svc = new BusinessKeyReconciliationService();
