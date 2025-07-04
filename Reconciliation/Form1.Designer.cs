@@ -91,6 +91,12 @@ namespace Reconciliation
             dgvLogs = new DataGridView();
             lblLogsSummary = new Label();
             lblMismatchSummary = new Label();
+            chkShowMissingHub = new CheckBox();
+            btnQuickFilter = new Button();
+            nudTolerance = new NumericUpDown();
+            lblTolerance = new Label();
+            lblDataIssues = new Label();
+            btnExportIssues = new Button();
             txtFilter = new TextBox();
             textLogs = new RichTextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
@@ -241,6 +247,12 @@ namespace Reconciliation
             splitMain.Panel1.Controls.Add(lblEmptyMessage);
             splitMain.Panel1.Controls.Add(lblMismatchSummary);
             splitMain.Panel1.Controls.Add(txtFilter);
+            splitMain.Panel1.Controls.Add(chkShowMissingHub);
+            splitMain.Panel1.Controls.Add(btnQuickFilter);
+            splitMain.Panel1.Controls.Add(lblTolerance);
+            splitMain.Panel1.Controls.Add(nudTolerance);
+            splitMain.Panel1.Controls.Add(lblDataIssues);
+            splitMain.Panel1.Controls.Add(btnExportIssues);
             splitMain.Panel2.Controls.Add(dgResultdata);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileRowCount);
             splitMain.Panel1.Controls.Add(lblSixDotOneFileName);
@@ -464,6 +476,69 @@ namespace Reconciliation
             txtFilter.Size = new Size(300, 27);
             txtFilter.TabIndex = 38;
             txtFilter.PlaceholderText = "Filter...";
+            //
+            // chkShowMissingHub
+            //
+            chkShowMissingHub.AutoSize = true;
+            chkShowMissingHub.Location = new Point(1520, 260);
+            chkShowMissingHub.Name = "chkShowMissingHub";
+            chkShowMissingHub.Size = new Size(210, 24);
+            chkShowMissingHub.TabIndex = 39;
+            chkShowMissingHub.Text = "Show Missing in MSPHub";
+            chkShowMissingHub.UseVisualStyleBackColor = true;
+            chkShowMissingHub.CheckedChanged += chkShowMissingHub_CheckedChanged;
+            //
+            // btnQuickFilter
+            //
+            btnQuickFilter.Location = new Point(1750, 260);
+            btnQuickFilter.Name = "btnQuickFilter";
+            btnQuickFilter.Size = new Size(150, 27);
+            btnQuickFilter.TabIndex = 40;
+            btnQuickFilter.Text = "Financial Issues";
+            btnQuickFilter.UseVisualStyleBackColor = true;
+            btnQuickFilter.Click += btnQuickFilter_Click;
+            //
+            // lblTolerance
+            //
+            lblTolerance.AutoSize = true;
+            lblTolerance.Location = new Point(1910, 264);
+            lblTolerance.Name = "lblTolerance";
+            lblTolerance.Size = new Size(77, 20);
+            lblTolerance.TabIndex = 41;
+            lblTolerance.Text = "Tolerance";
+            //
+            // nudTolerance
+            //
+            nudTolerance.DecimalPlaces = 2;
+            nudTolerance.Increment = new decimal(new int[] {1,0,0,131072});
+            nudTolerance.Location = new Point(1990, 260);
+            nudTolerance.Maximum = new decimal(new int[] {10,0,0,0});
+            nudTolerance.Name = "nudTolerance";
+            nudTolerance.Size = new Size(80, 27);
+            nudTolerance.TabIndex = 42;
+            nudTolerance.Value = new decimal(new int[] {1,0,0,131072});
+            nudTolerance.ValueChanged += nudTolerance_ValueChanged;
+            //
+            // lblDataIssues
+            //
+            lblDataIssues.AutoSize = true;
+            lblDataIssues.ForeColor = Color.Red;
+            lblDataIssues.Location = new Point(2080, 264);
+            lblDataIssues.Name = "lblDataIssues";
+            lblDataIssues.Size = new Size(0, 20);
+            lblDataIssues.TabIndex = 43;
+            lblDataIssues.Visible = false;
+            //
+            // btnExportIssues
+            //
+            btnExportIssues.Location = new Point(2080, 288);
+            btnExportIssues.Name = "btnExportIssues";
+            btnExportIssues.Size = new Size(150, 27);
+            btnExportIssues.TabIndex = 44;
+            btnExportIssues.Text = "Export Issues";
+            btnExportIssues.UseVisualStyleBackColor = true;
+            btnExportIssues.Visible = false;
+            btnExportIssues.Click += btnExportIssues_Click;
             //
             // dgResultdata
             //
@@ -988,6 +1063,12 @@ namespace Reconciliation
         private PictureBox pictureBox2;
         private SplitContainer splitMain;
         private Button btnToggleFiles;
+        private CheckBox chkShowMissingHub;
+        private Button btnQuickFilter;
+        private NumericUpDown nudTolerance;
+        private Label lblTolerance;
+        private Label lblDataIssues;
+        private Button btnExportIssues;
 
         private void Form1_Load(object sender, EventArgs e)
         {

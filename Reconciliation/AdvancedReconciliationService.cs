@@ -14,6 +14,12 @@ namespace Reconciliation
         private readonly BusinessKeyReconciliationService _rowComparer = new();
         private readonly PriceMismatchService _priceComparer = new();
 
+        public bool HideMissingInHub
+        {
+            get => _rowComparer.HideMissingInHub;
+            set => _rowComparer.HideMissingInHub = value;
+        }
+
         /// <summary>
         /// Runs both reconciliation passes and returns the aggregated result.
         /// </summary>
