@@ -210,5 +210,22 @@ public class BusinessKeyReconciliationServiceTests
         string details = result.Rows[0]["MismatchDetails"].ToString();
         Assert.Contains("Total:-1", details);
     }
-}
 
+
+    [Fact]
+    public void HideMissingInHub_SuppressesRows()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","1","1","10","1");
+
+        var ms = CreateTable(true);
+        ms.Rows.Add("cust.com","P1","1","1","10","1");
+        ms.Rows.Add("cust.com","P2","1","1","10","1");
+
+        var svc = new BusinessKeyReconciliationService { HideMissingInHub = true };
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Single(result.Rows);
+        Assert.DoesNotContain(result.Rows.Cast<DataRow>(), r => r["Status"].ToString() == "Missing in MSPHub");
+    }
+}

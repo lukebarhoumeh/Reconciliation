@@ -91,6 +91,7 @@ Use the **Export** menu to save error logs or comparison results.
 The new reconciliation engine loads mapping rules from `column-map.json` and
 groups rows by a composite key to detect genuine billing differences.
 Choose **Advanced Compare** in the UI to enable this engine.
+- Toggle **Show Missing in MSPHub** or **Financial Issues** to focus on key discrepancies. Adjust tolerance with the numeric control for rounding differences.
 
 ### Expression mapping
 Derived numeric columns in the map can use arithmetic expressions. Place column

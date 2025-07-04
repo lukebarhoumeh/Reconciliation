@@ -36,6 +36,10 @@ namespace Reconciliation
         private readonly FormsTimer _flashTimer = new();
         private string _lastSummary = string.Empty;
         private readonly AdvancedReconciliationService _reconService = new();
+        private bool _showMissingHub = false;
+        private bool _quickFilter = false;
+        private decimal _highlightAmountThreshold = 100m;
+        private decimal _highlightQuantityThreshold = 5m;
 
         #region Form_UX
 
@@ -82,6 +86,10 @@ namespace Reconciliation
             dgAzurePriceMismatch.Visible = false;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             txtFilter.TextChanged += FilterResults;
+            chkShowMissingHub.CheckedChanged += chkShowMissingHub_CheckedChanged;
+            btnQuickFilter.Click += btnQuickFilter_Click;
+            nudTolerance.ValueChanged += nudTolerance_ValueChanged;
+            btnExportIssues.Click += btnExportIssues_Click;
             if (tbcMenu.TabPages.Contains(tabPage3))
             {
                 tbcMenu.TabPages.Remove(tabPage3);
@@ -345,6 +353,8 @@ namespace Reconciliation
                 // Run the CPU-bound operations asynchronously
                 if (rbExternal.Checked == true)
                 {
+                    _reconService.HideMissingInHub = !_showMissingHub;
+                    AppConfig.Validation.NumericTolerance = nudTolerance.Value;
                     var result = await Task.Run(() =>
                         _reconService.Reconcile(_sixDotOneDataView.Table, _microsoftDataView.Table));
                     _resultData = result.RowDiscrepancies.DefaultView;
@@ -383,6 +393,8 @@ namespace Reconciliation
                         dgResultdata.ClearSelection();
                         btnExportToCsv.Enabled = true;
                         PopulateFieldFilterOptions();
+                        ApplyResultFilters();
+                        CheckDataIssues();
 
                         if (dgResultdata.Rows.Count == 0)
                         {
@@ -429,6 +441,8 @@ namespace Reconciliation
                         }
                         dgResultdata.Visible = true;
                         PopulateFieldFilterOptions();
+                        ApplyResultFilters();
+                        CheckDataIssues();
 
                         // Attach the event handler for cell formatting
                         dgResultdata.CellFormatting += DgMismatchData_CellFormatting;
@@ -482,7 +496,7 @@ namespace Reconciliation
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = saveFileDialog.FileName;
-                    ExportDataTableToExcel(_resultData.Table, filePath);
+                    ExportDataTableToExcel(_resultData.ToTable(), filePath);
                     MessageBox.Show("The Excel file has been successfully exported.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 AppendLog($"Action: {btnExportLogs.Text} click\n\n");
@@ -706,22 +720,30 @@ namespace Reconciliation
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
         }
 
-        private void FilterResults(object? sender, EventArgs e)
+        private void ApplyResultFilters()
         {
             if (_resultData == null) return;
+            var parts = new List<string>();
+            if (!_showMissingHub)
+                parts.Add("Status <> 'Missing in MSPHub'");
+            if (_quickFilter)
+                parts.Add("(Status = 'Mismatched' OR Status = 'Missing in Microsoft')");
+
             string term = txtFilter.Text.Replace("'", "''");
-            if (string.IsNullOrWhiteSpace(term))
+            if (!string.IsNullOrWhiteSpace(term))
             {
-                _resultData.RowFilter = string.Empty;
+                string search = string.Format("[Field Name] LIKE '%{0}%' OR Explanation LIKE '%{0}%' OR Reason LIKE '%{0}%'", term);
+                parts.Add(search);
             }
-            else
-            {
-                _resultData.RowFilter = string.Format(
-                    "[Field Name] LIKE '%{0}%' OR Explanation LIKE '%{0}%' OR Reason LIKE '%{0}%'",
-                    term);
-            }
+
+            _resultData.RowFilter = string.Join(" AND ", parts);
             lblMismatchSummary.Text = _lastSummary;
             lblMismatchSummary.Visible = !string.IsNullOrEmpty(_lastSummary);
+        }
+
+        private void FilterResults(object? sender, EventArgs e)
+        {
+            ApplyResultFilters();
         }
 
         private void PopulateFieldFilterOptions()
@@ -1263,6 +1285,20 @@ namespace Reconciliation
             // Get the column name
             string columnName = dgResultdata.Columns[e.ColumnIndex].Name;
 
+            if (dgResultdata.Columns.Contains("HubTotal") && dgResultdata.Columns.Contains("MSTotal") && e.RowIndex >= 0)
+            {
+                var row = dgResultdata.Rows[e.RowIndex];
+                decimal hubTot = SafeConvertToDecimal(row.Cells["HubTotal"].Value);
+                decimal msTot = SafeConvertToDecimal(row.Cells["MSTotal"].Value);
+                decimal hubQty = SafeConvertToDecimal(row.Cells["HubQuantity"].Value);
+                decimal msQty = SafeConvertToDecimal(row.Cells["MSQuantity"].Value);
+                if (Math.Abs(hubTot - msTot) > _highlightAmountThreshold ||
+                    Math.Abs(hubQty - msQty) > _highlightQuantityThreshold)
+                {
+                    row.DefaultCellStyle.BackColor = Color.LightCoral;
+                }
+            }
+
             // Apply color for Eff. Days Validation and Partner Discount Validation (High Priority - Red)
             if (columnName == "Eff. Days Validation" || columnName == "Partner Discount Validation")
             {
@@ -1353,7 +1389,82 @@ namespace Reconciliation
                 return string.Empty;
             var val = row[columnName];
             return val == null || val == DBNull.Value ? string.Empty : val.ToString();
-        } // <--- This closes the last method in Form1
+        }
+
+        private void chkShowMissingHub_CheckedChanged(object? sender, EventArgs e)
+        {
+            _showMissingHub = chkShowMissingHub.Checked;
+            ApplyResultFilters();
+        }
+
+        private void btnQuickFilter_Click(object? sender, EventArgs e)
+        {
+            _quickFilter = !_quickFilter;
+            btnQuickFilter.Text = _quickFilter ? "Show All" : "Financial Issues";
+            ApplyResultFilters();
+        }
+
+        private void nudTolerance_ValueChanged(object? sender, EventArgs e)
+        {
+            AppConfig.Validation.NumericTolerance = nudTolerance.Value;
+        }
+
+        private void btnExportIssues_Click(object? sender, EventArgs e)
+        {
+            if (_resultData == null) return;
+            var issues = _resultData.Table.AsEnumerable()
+                .Where(r => r.Field<string>("Status") == "Data Error");
+            if (!issues.Any()) return;
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "Excel File|*.xlsx",
+                FileName = $"DataIssues_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            };
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                var tbl = issues.CopyToDataTable();
+                ExportDataTableToExcel(tbl, sfd.FileName);
+            }
+        }
+
+        private void CheckDataIssues()
+        {
+            if (_resultData == null) return;
+            int errorCount = _resultData.Table.AsEnumerable()
+                .Count(r => r.Field<string>("Status") == "Data Error");
+
+            int skipped = 0;
+            var part = _lastSummary.Split('|').FirstOrDefault(p => p.Trim().StartsWith("Skipped", StringComparison.OrdinalIgnoreCase));
+            if (part != null)
+                int.TryParse(part.Split(':')[1].Trim().Split(' ')[0], out skipped);
+
+            int high = _resultData.Table.AsEnumerable()
+                .Count(r => r.Field<string>("Status") == "Mismatched" &&
+                    (Math.Abs(r.Field<decimal>("HubTotal") - r.Field<decimal>("MSTotal")) > _highlightAmountThreshold ||
+                     Math.Abs(r.Field<decimal>("HubQuantity") - r.Field<decimal>("MSQuantity")) > _highlightQuantityThreshold));
+
+            if (errorCount > 0 || skipped > 0 || high > 0)
+            {
+                lblDataIssues.Text = $"{errorCount} errors, {skipped} skipped" + (high > 0 ? $" | {high} highly mismatched" : string.Empty);
+                lblDataIssues.Visible = true;
+                btnExportIssues.Visible = errorCount > 0;
+            }
+            else
+            {
+                lblDataIssues.Visible = false;
+                btnExportIssues.Visible = false;
+            }
+
+            int smallMismatch = _resultData.Table.AsEnumerable()
+                .Count(r => r.Field<string>("Status") == "Mismatched" &&
+                        Math.Abs(r.Field<decimal>("HubTotal") - r.Field<decimal>("MSTotal")) <= AppConfig.Validation.NumericTolerance * 2 &&
+                        Math.Abs(r.Field<decimal>("HubQuantity") - r.Field<decimal>("MSQuantity")) <= AppConfig.Validation.NumericTolerance * 2);
+            if (smallMismatch > 5)
+            {
+                MessageBox.Show("Many mismatches are within tolerance. Consider adjusting the numeric tolerance.", "Tolerance", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
 
     }// <--- THIS IS THE ONLY closing brace for Form1
 }
