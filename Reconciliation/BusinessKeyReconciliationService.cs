@@ -15,6 +15,14 @@ namespace Reconciliation
     /// </summary>
     public class BusinessKeyReconciliationService
     {
+        /// <summary>Hide rows only present in the Microsoft invoice.</summary>
+        public bool HideMissingInHub { get; set; }
+
+        /// <summary>Tenant domains to exclude from comparison.</summary>
+        public HashSet<string> ExcludedTenants { get; } = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "READYNETWORKSDEMO"
+        };
 
         private sealed class GroupTotals
         {
@@ -89,11 +97,17 @@ namespace Reconciliation
                     : string.Join("|", cust, prod);
             }
 
-            var hubKeys = msphub.Rows.Cast<DataRow>()
-                .Select(GetKey)
-                .Where(k => !string.IsNullOrEmpty(k))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var hubDuplicateMap = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
+            var hubKeys = new List<string>();
+            foreach (DataRow r in msphub.Rows)
+            {
+                string key = GetKey(r);
+                if (string.IsNullOrEmpty(key)) continue;
+                hubKeys.Add(key);
+                hubDuplicateMap.TryGetValue(key, out int c);
+                hubDuplicateMap[key] = c + 1;
+            }
+            hubKeys = hubKeys.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             var msKeys = microsoft.Rows.Cast<DataRow>()
                 .Select(GetKey)
                 .Where(k => !string.IsNullOrEmpty(k))
@@ -107,6 +121,17 @@ namespace Reconciliation
 
             var overlap = hubKeys.Intersect(msKeys, StringComparer.OrdinalIgnoreCase).ToList();
             SimpleLogger.Info($"Overlap: {overlap.Count}. Sample: {string.Join(", ", overlap.Take(10))}");
+
+            int dupCount = hubDuplicateMap.Count(k => k.Value > 1);
+            if (dupCount > 0)
+            {
+                SimpleLogger.Warn($"Duplicate MSPHub keys: {dupCount}");
+                foreach (var kv in hubDuplicateMap.Where(k => k.Value > 1).Take(5))
+                {
+                    string msg = $"Duplicate {kv.Key} appears {kv.Value} times";
+                    if (kv.Value > 5) SimpleLogger.Error(msg); else SimpleLogger.Warn(msg);
+                }
+            }
 
             foreach (var key in hubKeys.Except(msKeys, StringComparer.OrdinalIgnoreCase))
                 SimpleLogger.Warn($"Key missing in Microsoft: {key}");
@@ -128,24 +153,13 @@ namespace Reconciliation
 
             SimpleLogger.Info($"Aggregated MSPHub keys: {hubGroups.Count}; MS keys: {msGroups.Count}");
 
-            var allKeys = new HashSet<string>(hubGroups.Keys, StringComparer.OrdinalIgnoreCase);
-            allKeys.UnionWith(msGroups.Keys);
-
-            foreach (var key in allKeys)
+            foreach (var key in hubGroups.Keys)
             {
                 hubGroups.TryGetValue(key, out var ours);
                 msGroups.TryGetValue(key, out var theirs);
 
                 if (ours == null)
-                {
-                    if (theirs != null)
-                    {
-                        AddMissingInHubRow(result, theirs);
-                        SimpleLogger.Warn($"Key {key} missing in MSPHub results");
-                        missingHub++;
-                    }
                     continue;
-                }
 
                 if (ours.HasError)
                 {
@@ -172,6 +186,16 @@ namespace Reconciliation
                 {
                     AddMismatchRow(result, ours, theirs);
                     mismatched++;
+                }
+            }
+
+            if (!HideMissingInHub)
+            {
+                foreach (var key in msGroups.Keys.Except(hubGroups.Keys, StringComparer.OrdinalIgnoreCase))
+                {
+                    AddMissingInHubRow(result, msGroups[key]);
+                    SimpleLogger.Warn($"Key {key} missing in MSPHub results");
+                    missingHub++;
                 }
             }
 
@@ -209,15 +233,24 @@ namespace Reconciliation
             int totalUnique = hubKeys.Count;
             int reported = reportedKeys.Count;
             int skipped = skippedKeys.Count;
+            int duplicateKeys = hubDuplicateMap.Count(k => k.Value > 1);
 
             LastSummary =
                 $"Matched: {matched} | Missing in Microsoft: {missingMs} | Missing in MSPHub: {missingHub} | Mismatched: {mismatched} | Data Errors: {errors} | " +
-                $"Total unique MSPHub keys: {totalUnique}; Reported: {reported}; Skipped: {skipped}";
+                $"Total unique MSPHub keys: {totalUnique}; Reported: {reported}; Skipped: {skipped}; Duplicates: {duplicateKeys}";
             try
             {
                 string logPath = Path.Combine(Directory.GetCurrentDirectory(),
                     $"DiagnosticLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
                 SimpleLogger.Export(logPath);
+
+                var diag = new List<string> { "CustomerDomainName,ProductId,Issue" };
+                diag.AddRange(skippedKeys.Select(k => $"{k.Replace("|", ",")},Skipped"));
+                diag.AddRange(hubDuplicateMap.Where(k => k.Value > 1)
+                                            .Select(k => $"{k.Key.Replace("|", ",")},Duplicate x{k.Value}"));
+                string diagPath = Path.Combine(Directory.GetCurrentDirectory(),
+                    $"DiagnosticKeys_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+                File.WriteAllLines(diagPath, diag);
             }
             catch { /* ignore logging failures */ }
             return result;
@@ -242,6 +275,12 @@ namespace Reconciliation
 
                 cust = cust.Trim();
                 prod = prod.Trim();
+
+                if (ExcludedTenants.Contains(cust.ToUpperInvariant()))
+                {
+                    SimpleLogger.Warn($"Excluded tenant {cust}");
+                    continue;
+                }
 
                 string key = string.Join("|", cust.ToUpperInvariant(), prod.ToUpperInvariant());
 
@@ -309,6 +348,7 @@ namespace Reconciliation
             t.Columns.Add("MSUnitPrice", typeof(decimal));
             t.Columns.Add("HubTaxTotal", typeof(decimal));
             t.Columns.Add("MSTaxTotal", typeof(decimal));
+            t.Columns.Add("MismatchDetails");
             return t;
         }
 
@@ -328,6 +368,7 @@ namespace Reconciliation
             r["MSUnitPrice"] = 0m;
             r["HubTaxTotal"] = ours.TaxTotal;
             r["MSTaxTotal"] = 0m;
+            r["MismatchDetails"] = string.Empty;
             table.Rows.Add(r);
         }
 
@@ -347,6 +388,7 @@ namespace Reconciliation
             r["MSUnitPrice"] = theirs.Quantity == 0 ? 0m : theirs.UnitPrice / theirs.Quantity;
             r["HubTaxTotal"] = 0m;
             r["MSTaxTotal"] = theirs.TaxTotal;
+            r["MismatchDetails"] = string.Empty;
             table.Rows.Add(r);
         }
 
@@ -366,6 +408,7 @@ namespace Reconciliation
             r["MSUnitPrice"] = 0m;
             r["HubTaxTotal"] = ours.TaxTotal;
             r["MSTaxTotal"] = 0m;
+            r["MismatchDetails"] = string.Empty;
             table.Rows.Add(r);
         }
 
@@ -385,6 +428,17 @@ namespace Reconciliation
             r["MSUnitPrice"] = ms.Quantity == 0 ? 0m : ms.UnitPrice / ms.Quantity;
             r["HubTaxTotal"] = hub.TaxTotal;
             r["MSTaxTotal"] = ms.TaxTotal;
+            decimal tol = AppConfig.Validation.NumericTolerance;
+            var diffs = new List<string>();
+            if (Math.Abs(hub.Quantity - ms.Quantity) > tol)
+                diffs.Add($"Quantity:{hub.Quantity - ms.Quantity:+0.##;-0.##}");
+            if (Math.Abs(hub.Subtotal - ms.Subtotal) > tol)
+                diffs.Add($"Subtotal:{hub.Subtotal - ms.Subtotal:+0.##;-0.##}");
+            if (Math.Abs(hub.Total - ms.Total) > tol)
+                diffs.Add($"Total:{hub.Total - ms.Total:+0.##;-0.##}");
+            if (Math.Abs(hub.TaxTotal - ms.TaxTotal) > tol)
+                diffs.Add($"TaxTotal:{hub.TaxTotal - ms.TaxTotal:+0.##;-0.##}");
+            r["MismatchDetails"] = string.Join("; ", diffs);
             table.Rows.Add(r);
         }
 
@@ -404,6 +458,7 @@ namespace Reconciliation
             r["MSUnitPrice"] = ms.Quantity == 0 ? 0m : ms.UnitPrice / ms.Quantity;
             r["HubTaxTotal"] = hub.TaxTotal;
             r["MSTaxTotal"] = ms.TaxTotal;
+            r["MismatchDetails"] = string.Empty;
             table.Rows.Add(r);
         }
         #endregion

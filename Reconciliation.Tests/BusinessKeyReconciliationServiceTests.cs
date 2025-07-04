@@ -120,7 +120,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(result.Rows);
         Assert.Equal("Mismatched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 0 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 1 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0", svc.LastSummary);
+        Assert.Equal("Matched: 0 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 1 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0; Duplicates: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(diff.Rows);
         Assert.Equal("Matched", diff.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0; Duplicates: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(result.Rows);
         Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0; Duplicates: 0", svc.LastSummary);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class BusinessKeyReconciliationServiceTests
 
         Assert.Single(result.Rows);
         Assert.Equal("Matched", result.Rows[0]["Status"]);
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 0 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0; Duplicates: 1", svc.LastSummary);
     }
 
     [Fact]
@@ -190,7 +190,25 @@ public class BusinessKeyReconciliationServiceTests
         Assert.Equal(2, result.Rows.Count);
         Assert.Contains(result.Rows.Cast<DataRow>(), r => r["Status"].ToString() == "Matched");
         Assert.Contains(result.Rows.Cast<DataRow>(), r => r["Status"].ToString() == "Missing in MSPHub");
-        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 1 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0", svc.LastSummary);
+        Assert.Equal("Matched: 1 | Missing in Microsoft: 0 | Missing in MSPHub: 1 | Mismatched: 0 | Data Errors: 0 | Total unique MSPHub keys: 1; Reported: 1; Skipped: 0; Duplicates: 0", svc.LastSummary);
+    }
+
+    [Fact]
+    public void MismatchRow_ShowsDifferenceDetails()
+    {
+        var ours = CreateTable();
+        ours.Rows.Add("cust.com","P1","1","1","10","1");
+
+        var ms = CreateTable(true);
+        ms.Rows.Add("cust.com","P1","1","1","11","1");
+
+        var svc = new BusinessKeyReconciliationService();
+        var result = svc.Reconcile(ours, ms);
+
+        Assert.Single(result.Rows);
+        Assert.Equal("Mismatched", result.Rows[0]["Status"]);
+        string details = result.Rows[0]["MismatchDetails"].ToString();
+        Assert.Contains("Total:-1", details);
     }
 }
 
