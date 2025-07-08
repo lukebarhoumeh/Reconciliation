@@ -8,10 +8,9 @@ using System.IO;
 namespace Reconciliation
 {
     /// <summary>
-    /// Reconciles two invoice tables using a minimal business key:
-    /// CustomerDomainName + ProductId. All other columns – ChargeType,
-    /// SubscriptionId/Guid, dates, etc. – are compared only after a key
-    /// match has been found.
+    /// Reconciles two invoice tables using a business key composed of
+    /// CustomerId + ProductId + ChargeType + SubscriptionId. All other
+    /// columns are compared only after a key match has been found.
     /// </summary>
     public class BusinessKeyReconciliationService
     {
@@ -26,8 +25,10 @@ namespace Reconciliation
 
         private sealed class GroupTotals
         {
-            public string CustomerDomain { get; init; } = string.Empty;
+            public string CustomerId { get; init; } = string.Empty;
             public string ProductId { get; init; } = string.Empty;
+            public string ChargeType { get; init; } = string.Empty;
+            public string SubscriptionId { get; init; } = string.Empty;
             public decimal Quantity { get; set; }
             public decimal Subtotal { get; set; }
             public decimal Total { get; set; }
@@ -39,6 +40,56 @@ namespace Reconciliation
 
         public string LastSummary { get; private set; } = string.Empty;
 
+        private static readonly string[] CustomerIdAliases =
+            { "CustomerId", "CustomerGuid", "CustomerDomainName" };
+
+        private static readonly string[] SubscriptionIdAliases =
+            { "SubscriptionId", "BillingSubscriptionId", "BillingSubId" };
+
+        private static void NormalizeKeyColumns(DataTable table)
+        {
+            if (table == null) return;
+
+            string cust = FindColumn(table, CustomerIdAliases);
+            table.ExtendedProperties["CustomerIdSource"] = string.IsNullOrEmpty(cust) ? "<missing>" : cust;
+            if (!string.IsNullOrEmpty(cust))
+                MergeColumn(table, cust, "CustomerId");
+
+            string sub = FindColumn(table, SubscriptionIdAliases);
+            table.ExtendedProperties["SubscriptionIdSource"] = string.IsNullOrEmpty(sub) ? "<missing>" : sub;
+            if (!string.IsNullOrEmpty(sub))
+                MergeColumn(table, sub, "SubscriptionId");
+        }
+
+        private static string FindColumn(DataTable table, IEnumerable<string> names)
+        {
+            foreach (var n in names)
+                if (table.Columns.Contains(n))
+                    return n;
+            return string.Empty;
+        }
+
+        private static void MergeColumn(DataTable table, string source, string target)
+        {
+            if (!table.Columns.Contains(source)) return;
+
+            if (!table.Columns.Contains(target))
+            {
+                table.Columns[source].ColumnName = target;
+                return;
+            }
+
+            foreach (DataRow row in table.Rows)
+            {
+                string val = Convert.ToString(row[target]) ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(val))
+                    row[target] = row[source];
+            }
+
+            if (!string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
+                table.Columns.Remove(source);
+        }
+
         // ------------------------------------------------------------------
         //  Public entry point
         // ------------------------------------------------------------------
@@ -49,6 +100,9 @@ namespace Reconciliation
 
             CsvPreProcessor.Process(msphub);
             CsvPreProcessor.Process(microsoft);
+
+            NormalizeKeyColumns(msphub);
+            NormalizeKeyColumns(microsoft);
 
             // Filter Microsoft rows by PartnerId only if both sides contain a single matching ID
             if (msphub.Columns.Contains("PartnerId") && microsoft.Columns.Contains("PartnerId"))
@@ -82,19 +136,40 @@ namespace Reconciliation
             // --------------------------------------------------------------
             // Diagnostic logging of unique keys after normalisation & mapping
             // --------------------------------------------------------------
-            static string GetKey(DataRow row)
+            bool firstKeyLog = true;
+            static string GetVal(DataRow r, string column)
+                => r.Table.Columns.Contains(column) ? Convert.ToString(r[column]) ?? string.Empty : string.Empty;
+
+            string GetKey(DataRow row)
             {
-                string cust = row.Table.Columns.Contains("CustomerDomainName")
-                    ? Convert.ToString(row["CustomerDomainName"]) ?? string.Empty
-                    : string.Empty;
-                string prod = row.Table.Columns.Contains("ProductId")
-                    ? Convert.ToString(row["ProductId"]) ?? string.Empty
-                    : string.Empty;
+                if (firstKeyLog)
+                {
+                    string custSrc = Convert.ToString(row.Table.ExtendedProperties["CustomerIdSource"]) ?? "<missing>";
+                    string subSrc = Convert.ToString(row.Table.ExtendedProperties["SubscriptionIdSource"]) ?? "<missing>";
+                    string prodSrc = row.Table.Columns.Contains("ProductId") ? "ProductId" : "<missing>";
+                    string chargeSrc = row.Table.Columns.Contains("ChargeType") ? "ChargeType" : "<missing>";
+                    SimpleLogger.Info($"Key columns detected: CustomerId='{custSrc}', ProductId='{prodSrc}', ChargeType='{chargeSrc}', SubscriptionId='{subSrc}'");
+                    firstKeyLog = false;
+                }
+
+                string cust = GetVal(row, "CustomerId");
+                string prod = GetVal(row, "ProductId");
+                string charge = GetVal(row, "ChargeType");
+                string sub = GetVal(row, "SubscriptionId");
+
                 cust = cust.Trim().ToUpperInvariant();
                 prod = prod.Trim().ToUpperInvariant();
-                return string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod)
-                    ? string.Empty
-                    : string.Join("|", cust, prod);
+                charge = charge.Trim().ToUpperInvariant();
+                sub = sub.Trim().ToUpperInvariant();
+
+                if (string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod) ||
+                    string.IsNullOrEmpty(charge) || string.IsNullOrEmpty(sub))
+                {
+                    SimpleLogger.Warn($"Empty key detected. CustomerId='{cust}', ProductId='{prod}', ChargeType='{charge}', SubscriptionId='{sub}'");
+                    return string.Empty;
+                }
+
+                return string.Join("|", cust, prod, charge, sub);
             }
 
             var hubDuplicateMap = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
@@ -164,7 +239,7 @@ namespace Reconciliation
                 if (ours.HasError)
                 {
                     AddDataErrorRow(result, ours);
-                    SimpleLogger.Warn($"Key {key} has missing CustomerDomainName or ProductId");
+                    SimpleLogger.Warn($"Key {key} has missing CustomerId, ProductId, ChargeType or SubscriptionId");
                     errors++;
                     continue;
                 }
@@ -222,8 +297,10 @@ namespace Reconciliation
                     var parts = key.Split('|');
                     var blank = new GroupTotals
                     {
-                        CustomerDomain = parts.ElementAtOrDefault(0) ?? string.Empty,
-                        ProductId = parts.ElementAtOrDefault(1) ?? string.Empty
+                        CustomerId = parts.ElementAtOrDefault(0) ?? string.Empty,
+                        ProductId = parts.ElementAtOrDefault(1) ?? string.Empty,
+                        ChargeType = parts.ElementAtOrDefault(2) ?? string.Empty,
+                        SubscriptionId = parts.ElementAtOrDefault(3) ?? string.Empty
                     };
                     AddDataErrorRow(result, blank);
                 }
@@ -244,7 +321,7 @@ namespace Reconciliation
                     $"DiagnosticLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
                 SimpleLogger.Export(logPath);
 
-                var diag = new List<string> { "CustomerDomainName,ProductId,Issue" };
+                var diag = new List<string> { "CustomerId,ProductId,ChargeType,SubscriptionId,Issue" };
                 diag.AddRange(skippedKeys.Select(k => $"{k.Replace("|", ",")},Skipped"));
                 diag.AddRange(hubDuplicateMap.Where(k => k.Value > 1)
                                             .Select(k => $"{k.Key.Replace("|", ",")},Duplicate x{k.Value}"));
@@ -266,15 +343,23 @@ namespace Reconciliation
 
             foreach (DataRow row in table.Rows)
             {
-                string cust = row.Table.Columns.Contains("CustomerDomainName")
-                    ? Convert.ToString(row["CustomerDomainName"]) ?? string.Empty
+                string cust = row.Table.Columns.Contains("CustomerId")
+                    ? Convert.ToString(row["CustomerId"]) ?? string.Empty
                     : string.Empty;
                 string prod = row.Table.Columns.Contains("ProductId")
                     ? Convert.ToString(row["ProductId"]) ?? string.Empty
                     : string.Empty;
+                string charge = row.Table.Columns.Contains("ChargeType")
+                    ? Convert.ToString(row["ChargeType"]) ?? string.Empty
+                    : string.Empty;
+                string sub = row.Table.Columns.Contains("SubscriptionId")
+                    ? Convert.ToString(row["SubscriptionId"]) ?? string.Empty
+                    : string.Empty;
 
                 cust = cust.Trim();
                 prod = prod.Trim();
+                charge = charge.Trim();
+                sub = sub.Trim();
 
                 if (ExcludedTenants.Contains(cust.ToUpperInvariant()))
                 {
@@ -282,15 +367,21 @@ namespace Reconciliation
                     continue;
                 }
 
-                string key = string.Join("|", cust.ToUpperInvariant(), prod.ToUpperInvariant());
+                string key = string.Join("|", cust.ToUpperInvariant(), prod.ToUpperInvariant(), charge.ToUpperInvariant(), sub.ToUpperInvariant());
 
                 if (!groups.TryGetValue(key, out var totals))
                 {
-                    totals = new GroupTotals { CustomerDomain = cust, ProductId = prod };
+                    totals = new GroupTotals
+                    {
+                        CustomerId = cust,
+                        ProductId = prod,
+                        ChargeType = charge,
+                        SubscriptionId = sub
+                    };
                     groups[key] = totals;
                 }
 
-                if (string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod))
+                if (string.IsNullOrEmpty(cust) || string.IsNullOrEmpty(prod) || string.IsNullOrEmpty(charge) || string.IsNullOrEmpty(sub))
                     totals.HasError = true;
 
                 decimal qty = SafeDecimal(row, "Quantity");
@@ -335,8 +426,10 @@ namespace Reconciliation
         private static DataTable BuildResultTable()
         {
             var t = new DataTable();
-            t.Columns.Add("CustomerDomainName");
+            t.Columns.Add("CustomerId");
             t.Columns.Add("ProductId");
+            t.Columns.Add("ChargeType");
+            t.Columns.Add("SubscriptionId");
             t.Columns.Add("Status");
             t.Columns.Add("HubQuantity", typeof(decimal));
             t.Columns.Add("MSQuantity", typeof(decimal));
@@ -355,8 +448,10 @@ namespace Reconciliation
         private static void AddMissingRow(DataTable table, GroupTotals ours)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = ours.CustomerDomain;
+            r["CustomerId"] = ours.CustomerId;
             r["ProductId"] = ours.ProductId;
+            r["ChargeType"] = ours.ChargeType;
+            r["SubscriptionId"] = ours.SubscriptionId;
             r["Status"] = "Missing in Microsoft";
             r["HubQuantity"] = ours.Quantity;
             r["MSQuantity"] = 0m;
@@ -375,8 +470,10 @@ namespace Reconciliation
         private static void AddMissingInHubRow(DataTable table, GroupTotals theirs)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = theirs.CustomerDomain;
+            r["CustomerId"] = theirs.CustomerId;
             r["ProductId"] = theirs.ProductId;
+            r["ChargeType"] = theirs.ChargeType;
+            r["SubscriptionId"] = theirs.SubscriptionId;
             r["Status"] = "Missing in MSPHub";
             r["HubQuantity"] = 0m;
             r["MSQuantity"] = theirs.Quantity;
@@ -395,8 +492,10 @@ namespace Reconciliation
         private static void AddDataErrorRow(DataTable table, GroupTotals ours)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = ours.CustomerDomain;
+            r["CustomerId"] = ours.CustomerId;
             r["ProductId"] = ours.ProductId;
+            r["ChargeType"] = ours.ChargeType;
+            r["SubscriptionId"] = ours.SubscriptionId;
             r["Status"] = "Data Error";
             r["HubQuantity"] = ours.Quantity;
             r["MSQuantity"] = 0m;
@@ -415,8 +514,10 @@ namespace Reconciliation
         private static void AddMismatchRow(DataTable table, GroupTotals hub, GroupTotals ms)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = hub.CustomerDomain;
+            r["CustomerId"] = hub.CustomerId;
             r["ProductId"] = hub.ProductId;
+            r["ChargeType"] = hub.ChargeType;
+            r["SubscriptionId"] = hub.SubscriptionId;
             r["Status"] = "Mismatched";
             r["HubQuantity"] = hub.Quantity;
             r["MSQuantity"] = ms.Quantity;
@@ -445,8 +546,10 @@ namespace Reconciliation
         private static void AddMatchRow(DataTable table, GroupTotals hub, GroupTotals ms)
         {
             var r = table.NewRow();
-            r["CustomerDomainName"] = hub.CustomerDomain;
+            r["CustomerId"] = hub.CustomerId;
             r["ProductId"] = hub.ProductId;
+            r["ChargeType"] = hub.ChargeType;
+            r["SubscriptionId"] = hub.SubscriptionId;
             r["Status"] = "Matched";
             r["HubQuantity"] = hub.Quantity;
             r["MSQuantity"] = ms.Quantity;
