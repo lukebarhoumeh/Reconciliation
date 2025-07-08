@@ -12,14 +12,18 @@ namespace Reconciliation.Tests
         {
             var svc = new PriceMismatchService();
             var hub = new DataTable();
-            hub.Columns.Add("CustomerDomainName");
+            hub.Columns.Add("CustomerId");
             hub.Columns.Add("ProductId");
+            hub.Columns.Add("ChargeType");
+            hub.Columns.Add("SubscriptionId");
             hub.Columns.Add("Quantity", typeof(decimal));
             hub.Columns.Add("Subtotal", typeof(decimal));
-            hub.Rows.Add("a.com","p1",1m,10m);
+            hub.Columns.Add("Total", typeof(decimal));
+            hub.Columns.Add("TaxTotal", typeof(decimal));
+            hub.Rows.Add("C1","p1","Usage","S1",1m,10m,10m,0m);
 
             var ms = hub.Clone();
-            ms.Rows.Add("a.com","p1",1m,10m);
+            ms.Rows.Add("C1","p1","Usage","S1",1m,10m,10m,0m);
             var result = svc.GetPriceMismatches(hub, ms);
             Assert.Empty(result.Rows);
         }
@@ -44,18 +48,21 @@ namespace Reconciliation.Tests
         {
             var svc = new PriceMismatchService();
             var hub = new DataTable();
-            hub.Columns.Add("CustomerDomainName");
+            hub.Columns.Add("CustomerId");
             hub.Columns.Add("ProductId");
             hub.Columns.Add("ChargeType");
+            hub.Columns.Add("SubscriptionId");
             hub.Columns.Add("Quantity", typeof(decimal));
             hub.Columns.Add("Subtotal", typeof(decimal));
+            hub.Columns.Add("Total", typeof(decimal));
+            hub.Columns.Add("TaxTotal", typeof(decimal));
             // Hub records only the net additional license
-            hub.Rows.Add("a.com", "p1", "Usage", 1m, 1m);
+            hub.Rows.Add("C1", "p1", "Usage", "S1", 1m, 1m, 1m, 0m);
 
             var ms = hub.Clone();
             // Microsoft invoice credits original charge then debits new amount
-            ms.Rows.Add("a.com", "p1", "Credit", -100m, 0m);
-            ms.Rows.Add("a.com", "p1", "Usage", 101m, 101m);
+            ms.Rows.Add("C1", "p1", "Credit", "S1", -100m, 0m, 0m, 0m);
+            ms.Rows.Add("C1", "p1", "Usage", "S1", 101m, 101m, 101m, 0m);
 
             var result = svc.GetPriceMismatches(hub, ms);
             Assert.Single(result.Rows);

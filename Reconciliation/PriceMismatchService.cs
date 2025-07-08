@@ -19,8 +19,10 @@ namespace Reconciliation
         // ------------------------------------------------------------------
         private static readonly string[] KeyColumns =
         {
-            "CustomerDomainName",
-            "ProductId"
+            "CustomerId",
+            "ProductId",
+            "ChargeType",
+            "SubscriptionId"
         };
 
         private const string AzurePlan = "Azure plan";
@@ -43,7 +45,7 @@ namespace Reconciliation
                                        .ToArray();
 
             if (hubFiltered.Length == 0 || msFiltered.Length == 0)
-                return msphub.Clone();   // nothing left to compare
+                return BuildResultTable();   // nothing left to compare
 
             // 2. Group by deterministic key
             var hubGroups = hubFiltered.GroupBy(MakeKey);
@@ -51,13 +53,7 @@ namespace Reconciliation
                                       .ToDictionary(g => g.Key, g => g);
 
             // 3. Result table
-            var result = msphub.Clone();
-            result.Columns.Add("HubQuantity", typeof(decimal));
-            result.Columns.Add("MSQuantity", typeof(decimal));
-            result.Columns.Add("HubSubtotal", typeof(decimal));
-            result.Columns.Add("MSSubtotal", typeof(decimal));
-            result.Columns.Add("QuantityDiff", typeof(decimal));
-            result.Columns.Add("PriceDiff", typeof(decimal));
+            var result = BuildResultTable();
 
             // 4. Comparison loop
             foreach (var hGroup in hubGroups)
@@ -65,10 +61,14 @@ namespace Reconciliation
                 if (!msGroups.TryGetValue(hGroup.Key, out var mGroup))
                     continue;       // appears only in MSP‑Hub: handled elsewhere
 
-                decimal hubQty = hGroup.Sum(r => SafeDecimal(r["Quantity"]));
-                decimal hubSub = hGroup.Sum(r => SafeDecimal(r["Subtotal"]));
-                decimal msQty = mGroup.Sum(r => SafeDecimal(r["Quantity"]));
-                decimal msSub = mGroup.Sum(r => SafeDecimal(r["Subtotal"]));
+                decimal hubQty = hGroup.Sum(r => r.Table.Columns.Contains("Quantity") ? SafeDecimal(r["Quantity"]) : 0m);
+                decimal hubSub = hGroup.Sum(r => r.Table.Columns.Contains("Subtotal") ? SafeDecimal(r["Subtotal"]) : 0m);
+                decimal hubTot = hGroup.Sum(r => r.Table.Columns.Contains("Total") ? SafeDecimal(r["Total"]) : 0m);
+                decimal hubTax = hGroup.Sum(r => r.Table.Columns.Contains("TaxTotal") ? SafeDecimal(r["TaxTotal"]) : 0m);
+                decimal msQty = mGroup.Sum(r => r.Table.Columns.Contains("Quantity") ? SafeDecimal(r["Quantity"]) : 0m);
+                decimal msSub = mGroup.Sum(r => r.Table.Columns.Contains("Subtotal") ? SafeDecimal(r["Subtotal"]) : 0m);
+                decimal msTot = mGroup.Sum(r => r.Table.Columns.Contains("Total") ? SafeDecimal(r["Total"]) : 0m);
+                decimal msTax = mGroup.Sum(r => r.Table.Columns.Contains("TaxTotal") ? SafeDecimal(r["TaxTotal"]) : 0m);
 
                 decimal qtyDiff = hubQty - msQty;
                 decimal subDiff = hubSub - msSub;
@@ -80,8 +80,15 @@ namespace Reconciliation
                 // 5. Write one representative row
                 var row = result.NewRow();
                 var parts = hGroup.Key.Split('|');
-                for (int i = 0; i < KeyColumns.Length; i++)
-                    row[KeyColumns[i]] = parts[i];
+                for (int i = 0; i < KeyColumns.Length && i < parts.Length; i++)
+                {
+                    string name = KeyColumns[i];
+                    if (result.Columns.Contains(name))
+                        row[name] = parts[i];
+                }
+
+                if (result.Columns.Contains("Status"))
+                    row["Status"] = "Mismatched";
 
                 if (result.Columns.Contains("ChargeType"))
                 {
@@ -89,12 +96,15 @@ namespace Reconciliation
                         hGroup.Where(r => r.Table.Columns.Contains("ChargeType"))
                                .Select(r => r["ChargeType"]).Distinct());
                 }
-                row["HubQuantity"] = hubQty;
-                row["MSQuantity"] = msQty;
-                row["HubSubtotal"] = hubSub;
-                row["MSSubtotal"] = msSub;
-                row["QuantityDiff"] = qtyDiff;
-                row["PriceDiff"] = subDiff;
+                if (result.Columns.Contains("HubQuantity")) row["HubQuantity"] = hubQty;
+                if (result.Columns.Contains("MSQuantity")) row["MSQuantity"] = msQty;
+                if (result.Columns.Contains("HubSubtotal")) row["HubSubtotal"] = hubSub;
+                if (result.Columns.Contains("MSSubtotal")) row["MSSubtotal"] = msSub;
+                if (result.Columns.Contains("HubTotal")) row["HubTotal"] = hubTot;
+                if (result.Columns.Contains("MSTotal")) row["MSTotal"] = msTot;
+                if (result.Columns.Contains("HubTaxTotal")) row["HubTaxTotal"] = hubTax;
+                if (result.Columns.Contains("MSTaxTotal")) row["MSTaxTotal"] = msTax;
+                if (result.Columns.Contains("PriceDiff")) row["PriceDiff"] = subDiff;
 
                 result.Rows.Add(row);
             }
@@ -141,6 +151,26 @@ namespace Reconciliation
             package.SaveAs(new System.IO.FileInfo(filePath));
         }
 
+        private static DataTable BuildResultTable()
+        {
+            var t = new DataTable();
+            t.Columns.Add("CustomerId");
+            t.Columns.Add("ProductId");
+            t.Columns.Add("ChargeType");
+            t.Columns.Add("SubscriptionId");
+            t.Columns.Add("Status");
+            t.Columns.Add("HubQuantity", typeof(decimal));
+            t.Columns.Add("MSQuantity", typeof(decimal));
+            t.Columns.Add("HubSubtotal", typeof(decimal));
+            t.Columns.Add("MSSubtotal", typeof(decimal));
+            t.Columns.Add("HubTotal", typeof(decimal));
+            t.Columns.Add("MSTotal", typeof(decimal));
+            t.Columns.Add("HubTaxTotal", typeof(decimal));
+            t.Columns.Add("MSTaxTotal", typeof(decimal));
+            t.Columns.Add("PriceDiff", typeof(decimal));
+            return t;
+        }
+
         // ------------------------------------------------------------------
         //  Helpers
         // ------------------------------------------------------------------
@@ -151,9 +181,11 @@ namespace Reconciliation
 
         private static string MakeKey(DataRow r)
         {
-            string customer = r.Table.Columns.Contains("CustomerDomainName")
-                ? Convert.ToString(r["CustomerDomainName"]) ?? string.Empty
+            string customer = r.Table.Columns.Contains("CustomerId")
+                ? Convert.ToString(r["CustomerId"]) ?? string.Empty
                 : string.Empty;
+            if (string.IsNullOrWhiteSpace(customer) && r.Table.Columns.Contains("CustomerDomainName"))
+                customer = Convert.ToString(r["CustomerDomainName"]) ?? string.Empty;
             if (string.IsNullOrWhiteSpace(customer) && r.Table.Columns.Contains("CustomerName"))
                 customer = Convert.ToString(r["CustomerName"]) ?? string.Empty;
 
@@ -163,8 +195,21 @@ namespace Reconciliation
             if (string.IsNullOrWhiteSpace(product) && r.Table.Columns.Contains("PartNumber"))
                 product = Convert.ToString(r["PartNumber"]) ?? string.Empty;
 
-            return (customer?.Trim().ToUpperInvariant() ?? string.Empty) + "|" +
-                   (product?.Trim().ToUpperInvariant() ?? string.Empty);
+            string charge = r.Table.Columns.Contains("ChargeType")
+                ? Convert.ToString(r["ChargeType"]) ?? string.Empty
+                : string.Empty;
+
+            string sub = r.Table.Columns.Contains("SubscriptionId")
+                ? Convert.ToString(r["SubscriptionId"]) ?? string.Empty
+                : string.Empty;
+            if (string.IsNullOrWhiteSpace(sub) && r.Table.Columns.Contains("SkuId"))
+                sub = Convert.ToString(r["SkuId"]) ?? string.Empty;
+
+            return string.Join("|",
+                (customer?.Trim().ToUpperInvariant() ?? string.Empty),
+                (product?.Trim().ToUpperInvariant() ?? string.Empty),
+                (charge?.Trim().ToUpperInvariant() ?? string.Empty),
+                (sub?.Trim().ToUpperInvariant() ?? string.Empty));
         }
 
         private static decimal SafeDecimal(object? v) =>
